@@ -439,26 +439,63 @@ public class WebServer {
 
     /* ─────────────────────── Messages Config ─────────────────────── */
 
+    /* ─────────────────────── Messages Config ─────────────────────── */
+
     private void registerMessagesRoutes() {
-        // GET /api/config/messages — baca semua messages dari config
+        // GET /api/config/messages — return BOTH sections: { chat: {...}, gui: {...} }
         app.get("/api/config/messages", ctx -> {
-            var section = plugin.getConfig().getConfigurationSection("messages");
-            Map<String, String> msgs = new LinkedHashMap<>();
-            if (section != null) {
-                section.getKeys(false).forEach(k -> msgs.put(k, section.getString(k, "")));
+            var chatSection = plugin.getConfig().getConfigurationSection("messages");
+            var guiSection  = plugin.getConfig().getConfigurationSection("gui-messages");
+
+            java.util.Map<String, String> chatMsgs = new java.util.LinkedHashMap<>();
+            java.util.Map<String, String> guiMsgs  = new java.util.LinkedHashMap<>();
+
+            if (chatSection != null) {
+                chatSection.getKeys(false).forEach(k ->
+                        chatMsgs.put(k, chatSection.getString(k, "")));
             }
-            ctx.json(msgs);
+            if (guiSection != null) {
+                guiSection.getKeys(false).forEach(k ->
+                        guiMsgs.put(k, guiSection.getString(k, "")));
+            }
+
+            ctx.result(GsonProvider.getGson().toJson(
+                    java.util.Map.of("chat", chatMsgs, "gui", guiMsgs)
+            ));
         });
 
-        // POST /api/config/messages — update messages di config + save
+        // POST /api/config/messages — accepts { chat: {...}, gui: {...} }
+        // Also accepts legacy flat format { key: value } → treated as chat-only
         app.post("/api/config/messages", ctx -> {
             try {
-                Map<?,?> body = ctx.bodyAsClass(Map.class);
-                body.forEach((k, v) -> plugin.getConfig().set("messages." + k, v.toString()));
+                com.google.gson.JsonObject root = GsonProvider.getGson()
+                        .fromJson(ctx.body(), com.google.gson.JsonObject.class);
+
+                if (root.has("chat") || root.has("gui")) {
+                    // New format: { chat: {...}, gui: {...} }
+                    if (root.has("chat") && root.get("chat").isJsonObject()) {
+                        root.get("chat").getAsJsonObject().entrySet().forEach(e ->
+                                plugin.getConfig().set("messages." + e.getKey(),
+                                        e.getValue().getAsString()));
+                    }
+                    if (root.has("gui") && root.get("gui").isJsonObject()) {
+                        root.get("gui").getAsJsonObject().entrySet().forEach(e ->
+                                plugin.getConfig().set("gui-messages." + e.getKey(),
+                                        e.getValue().getAsString()));
+                    }
+                } else {
+                    // Legacy flat format → treat as chat messages
+                    root.entrySet().forEach(e ->
+                            plugin.getConfig().set("messages." + e.getKey(),
+                                    e.getValue().getAsString()));
+                }
+
                 plugin.saveConfig();
                 me.bintanq.quantumcrates.util.MessageManager.init(plugin);
                 ctx.json(ok("Messages saved and applied."));
-            } catch (Exception e) { ctx.status(400).json(err(e.getMessage())); }
+            } catch (Exception e) {
+                ctx.status(400).json(err(e.getMessage()));
+            }
         });
     }
 
