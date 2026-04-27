@@ -37,6 +37,16 @@ async function launchApp() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appShell').style.display    = 'flex';
 
+  // Load rarities FIRST — everything else depends on this
+  try {
+    const data = await API.get('/rarities');
+    const list = data.data || [];
+    State.setRarities(list);
+  } catch (e) {
+    console.warn('Could not load rarities, using defaults:', e.message);
+    State.setRarities(DEFAULT_RARITIES);
+  }
+
   // Load crates
   try {
     const data = await API.getCrates();
@@ -61,11 +71,22 @@ async function launchApp() {
     if (State.currentPage === 'analytics') Analytics.onLiveOpen?.(data);
   });
   WS.on('CRATE_UPDATE', () => {
-    // Reload crates dari server saat ada update
     API.getCrates().then(data => {
       const list = data.data || [];
       list.forEach(c => State.setCrate(c));
     }).catch(() => {});
+  });
+  WS.on('RARITIES_UPDATE', data => {
+    if (data.rarities) {
+      // rarities dari WS adalah JsonArray, parse kalau perlu
+      const list = Array.isArray(data.rarities) ? data.rarities : [];
+      State.setRarities(list);
+      // Re-render architect kalau sedang buka
+      if (State.currentPage === 'architect') {
+        const el = document.getElementById('page-architect');
+        if (el) Architect.render(el);
+      }
+    }
   });
 
   await refreshStatus();
@@ -108,7 +129,6 @@ function updateSidebarVersion() {
 
 /* ── Logout ── */
 function logout() {
-  // Hapus cookie
   document.cookie = 'qc_jwt=; Path=/; Max-Age=0';
   State.jwt = null;
   State.demoMode = false;
@@ -145,7 +165,6 @@ function initLoginParticles() {
     `;
     container.appendChild(p);
   }
-  // Inject keyframes kalau belum ada
   if (!document.getElementById('particleKf')) {
     const s = document.createElement('style');
     s.id = 'particleKf';
@@ -158,3 +177,13 @@ function initLoginParticles() {
 function closeModalOnOverlay(e) {
   if (e.target === document.getElementById('modalOverlay')) Modal.close();
 }
+
+/* ── Default rarities fallback (kalau server offline / demo) ── */
+const DEFAULT_RARITIES = [
+  { id:'COMMON',    displayName:'Common',    color:'&f', hexColor:'#aaaaaa', order:0, borderMaterial:'GRAY_STAINED_GLASS_PANE',    icon:'⬜' },
+  { id:'UNCOMMON',  displayName:'Uncommon',  color:'&a', hexColor:'#00d97e', order:1, borderMaterial:'GREEN_STAINED_GLASS_PANE',   icon:'🟩' },
+  { id:'RARE',      displayName:'Rare',      color:'&9', hexColor:'#4488ff', order:2, borderMaterial:'BLUE_STAINED_GLASS_PANE',    icon:'🔷' },
+  { id:'EPIC',      displayName:'Epic',      color:'&5', hexColor:'#9b59f5', order:3, borderMaterial:'MAGENTA_STAINED_GLASS_PANE', icon:'🟣' },
+  { id:'LEGENDARY', displayName:'Legendary', color:'&6', hexColor:'#f5a623', order:4, borderMaterial:'ORANGE_STAINED_GLASS_PANE',  icon:'🟡' },
+  { id:'MYTHIC',    displayName:'Mythic',    color:'&d', hexColor:'#ff44aa', order:5, borderMaterial:'PURPLE_STAINED_GLASS_PANE',  icon:'🩷' },
+];

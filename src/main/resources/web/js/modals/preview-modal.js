@@ -45,8 +45,16 @@ const PreviewModal = {
           <div class="preview-stat-val" style="color:var(--cyan)">${sorted.length}</div>
           <div class="preview-stat-label">Rewards</div>
         </div>
+        <div class="preview-stat-label">Rewards</div>
+        </div>
         <div class="preview-stat">
-          <div class="preview-stat-val" style="color:var(--gold)">${sorted.filter(r=>Utils.rarityOrder(r.rarity)>=4).length}</div>
+          <div class="preview-stat-val" style="color:var(--gold)">
+            ${
+              sorted.filter(r =>
+                State.rarityOrder(r.rarity) >= State.rarityOrder('LEGENDARY') ||| 999
+              ).length
+            }
+          </div>
           <div class="preview-stat-label">Legendary+</div>
         </div>
         <div class="preview-stat">
@@ -89,10 +97,28 @@ const PreviewModal = {
         const r = sorted[rIdx++];
         if (r) {
           const pct   = Utils.chance(r.weight, tw);
-          const color = Utils.rarityColor(r.rarity);
-          const icon  = r.iconUrl
-            ? `<img class="slot-img" src="${r.iconUrl}" alt=""/>`
-            : `<span class="slot-icon">${Utils.materialIcon(r.material)}</span>`;
+
+          const color = State.rarityColor(r.rarity);
+          const rName = State.rarityName(r.rarity);
+          const rIcon = State.rarityIcon(r.rarity);
+
+          slot.className = 'mc-slot interactive';
+          slot.style.borderBottom = `2px solid ${color}`;
+          slot.innerHTML = `
+            <div class="slot-rarity-dot" style="background:${color};box-shadow:0 0 4px ${color}80"></div>
+            ${icon}
+            ${cfg.showChance !== false ? `<div class="slot-chance">${pct < 0.01 ? '<0.01' : pct.toFixed(2)}%</div>` : ''}
+            <div class="slot-tooltip">
+              <div class="tt-name">${Utils.strip(r.displayName)}</div>
+
+              <div class="tt-rarity" style="color:${color}">${rIcon} ${rName}</div>
+
+              <div class="tt-sep"></div>
+              ${cfg.showChance !== false ? `<div class="tt-chance">Chance: ${pct.toFixed(4)}%</div>` : ''}
+              <div class="tt-extra">Amount: x${r.amount || 1}</div>
+            </div>
+          `;
+        }
 
           slot.className = 'mc-slot interactive';
           slot.style.borderBottom = `2px solid ${color}`;

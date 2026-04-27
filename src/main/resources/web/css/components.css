@@ -54,13 +54,17 @@ textarea.field-input{resize:vertical;min-height:72px;line-height:1.5}
 .seg-opt:not(.active):hover{color:var(--text);background:var(--surface)}
 
 /* ══ BADGE ══ */
-.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
-.badge-common   {background:rgba(170,170,170,.1);color:#aaa;border:1px solid rgba(170,170,170,.2)}
-.badge-uncommon {background:var(--green-dim);color:var(--green);border:1px solid rgba(0,217,126,.2)}
-.badge-rare     {background:var(--blue-dim);color:var(--blue);border:1px solid rgba(68,136,255,.2)}
-.badge-epic     {background:var(--purple-dim);color:var(--purple);border:1px solid rgba(155,89,245,.2)}
-.badge-legendary{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(245,166,35,.2)}
-.badge-mythic   {background:rgba(255,68,170,.1);color:var(--pink);border:1px solid rgba(255,68,170,.2)}
+.badge-dynamic {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    border: 1px solid transparent;
+    text-transform: uppercase;
+}
 
 /* ══ STAT CARDS ══ */
 .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}

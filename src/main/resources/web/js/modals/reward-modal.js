@@ -1,6 +1,6 @@
 /* ══ MODAL: ADD / EDIT REWARD ══ */
 const RewardModal = {
-  selectedRarity: 'COMMON',
+  selectedRarity: null,  // null = akan di-set ke lowest rarity saat open
   iconUrl: '',
   callback: null,
   editing: null,
@@ -8,8 +8,19 @@ const RewardModal = {
   open(reward, onSave) {
     this.callback = onSave;
     this.editing  = reward;
-    this.selectedRarity = reward?.rarity || 'COMMON';
+    this.selectedRarity = reward?.rarity || State.rarities[0]?.id || 'COMMON';
     this.iconUrl  = reward?.iconUrl || '';
+
+    const rarityPickerHtml = State.rarities.map(r => {
+      const color = r.hexColor;
+      const isActive = this.selectedRarity === r.id;
+      return `<div class="rarity-opt${isActive ? ' active' : ''}"
+        data-r="${r.id}"
+        style="border-color:${color};color:${color};${isActive ? `background:${color}18` : ''}"
+        onclick="RewardModal.pickRarity(this,'${r.id}')">
+        ${r.icon} ${r.displayName}
+      </div>`;
+    }).join('');
 
     Modal.open(`
       <div class="modal-head">
@@ -46,74 +57,73 @@ const RewardModal = {
             <input type="file" id="iconFile" accept="image/*,.gif" style="display:none" onchange="RewardModal.handleIcon(event)"/>
           </div>
           <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+            <div class="field-group">
+              <label class="field-label">Type</label>
+              <select class="field-input" id="rwType" onchange="RewardModal.toggleTypeFields()">
+                ${['VANILLA','COMMAND','VANILLA_WITH_COMMANDS','MMOITEMS','ITEMSADDER','ORAXEN'].map(t =>
+                  `<option value="${t}" ${reward?.type===t?'selected':''}>${t.replace(/_/g,' ')}</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- VANILLA fields -->
+            <div id="rwVanillaGroup" style="display:flex;flex-direction:column;gap:8px">
               <div class="field-group">
-                <label class="field-label">Type</label>
-                <select class="field-input" id="rwType" onchange="RewardModal.toggleTypeFields()">
-                  ${['VANILLA','COMMAND','VANILLA_WITH_COMMANDS','MMOITEMS','ITEMSADDER','ORAXEN'].map(t =>
-                    `<option value="${t}" ${reward?.type===t?'selected':''}>${t.replace(/_/g,' ')}</option>`).join('')}
-                </select>
+                <label class="field-label">Material (Bukkit)</label>
+                <input class="field-input" id="rwMat" value="${reward?.material||'STONE'}" placeholder="DIAMOND_SWORD"/>
               </div>
-
-              <!-- VANILLA fields -->
-              <div id="rwVanillaGroup" style="display:flex;flex-direction:column;gap:8px">
-                <div class="field-group">
-                  <label class="field-label">Material (Bukkit)</label>
-                  <input class="field-input" id="rwMat" value="${reward?.material||'STONE'}" placeholder="DIAMOND_SWORD"/>
-                </div>
-                <div class="field-group">
-                  <label class="field-label">Amount</label>
-                  <input class="field-input" type="number" id="rwAmt" value="${reward?.amount||1}" min="1" max="64"/>
-                </div>
-              </div>
-
-              <!-- MMOITEMS fields -->
-              <div id="rwMmoGroup" style="display:none;flex-direction:column;gap:8px">
-                <div class="field-group">
-                  <label class="field-label">MMOItems Type</label>
-                  <input class="field-input" id="rwMmoType" value="${reward?.mmoItemsType||''}" placeholder="SWORD"/>
-                </div>
-                <div class="field-group">
-                  <label class="field-label">MMOItems ID</label>
-                  <input class="field-input" id="rwMmoId" value="${reward?.mmoItemsId||''}" placeholder="my_sword"/>
-                </div>
-                <div class="field-group">
-                  <label class="field-label">Amount</label>
-                  <input class="field-input" type="number" id="rwMmoAmt" value="${reward?.amount||1}" min="1" max="64"/>
-                </div>
-              </div>
-
-              <!-- ITEMSADDER fields -->
-              <div id="rwIaGroup" style="display:none;flex-direction:column;gap:8px">
-                <div class="field-group">
-                  <label class="field-label">ItemsAdder Namespace ID</label>
-                  <input class="field-input" id="rwIaId" value="${reward?.itemsAdderId||''}" placeholder="mypack:ruby_sword"/>
-                </div>
-                <div class="field-group">
-                  <label class="field-label">Amount</label>
-                  <input class="field-input" type="number" id="rwIaAmt" value="${reward?.amount||1}" min="1" max="64"/>
-                </div>
-              </div>
-
-              <!-- ORAXEN fields -->
-              <div id="rwOraxenGroup" style="display:none;flex-direction:column;gap:8px">
-                <div class="field-group">
-                  <label class="field-label">Oraxen ID</label>
-                  <input class="field-input" id="rwOraxenId" value="${reward?.oraxenId||''}" placeholder="my_item"/>
-                </div>
-                <div class="field-group">
-                  <label class="field-label">Amount</label>
-                  <input class="field-input" type="number" id="rwOraxenAmt" value="${reward?.amount||1}" min="1" max="64"/>
-                </div>
+              <div class="field-group">
+                <label class="field-label">Amount</label>
+                <input class="field-input" type="number" id="rwAmt" value="${reward?.amount||1}" min="1" max="64"/>
               </div>
             </div>
 
-        <!-- Rarity -->
+            <!-- MMOITEMS fields -->
+            <div id="rwMmoGroup" style="display:none;flex-direction:column;gap:8px">
+              <div class="field-group">
+                <label class="field-label">MMOItems Type</label>
+                <input class="field-input" id="rwMmoType" value="${reward?.mmoItemsType||''}" placeholder="SWORD"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">MMOItems ID</label>
+                <input class="field-input" id="rwMmoId" value="${reward?.mmoItemsId||''}" placeholder="my_sword"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Amount</label>
+                <input class="field-input" type="number" id="rwMmoAmt" value="${reward?.amount||1}" min="1" max="64"/>
+              </div>
+            </div>
+
+            <!-- ITEMSADDER fields -->
+            <div id="rwIaGroup" style="display:none;flex-direction:column;gap:8px">
+              <div class="field-group">
+                <label class="field-label">ItemsAdder Namespace ID</label>
+                <input class="field-input" id="rwIaId" value="${reward?.itemsAdderId||''}" placeholder="mypack:ruby_sword"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Amount</label>
+                <input class="field-input" type="number" id="rwIaAmt" value="${reward?.amount||1}" min="1" max="64"/>
+              </div>
+            </div>
+
+            <!-- ORAXEN fields -->
+            <div id="rwOraxenGroup" style="display:none;flex-direction:column;gap:8px">
+              <div class="field-group">
+                <label class="field-label">Oraxen ID</label>
+                <input class="field-input" id="rwOraxenId" value="${reward?.oraxenId||''}" placeholder="my_item"/>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Amount</label>
+                <input class="field-input" type="number" id="rwOraxenAmt" value="${reward?.amount||1}" min="1" max="64"/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rarity — dynamic dari State.rarities -->
         <div class="field-group" style="margin-bottom:12px">
           <label class="field-label">Rarity</label>
           <div class="rarity-picker" id="rarityPicker">
-            ${['COMMON','UNCOMMON','RARE','EPIC','LEGENDARY','MYTHIC'].map(r =>
-              `<div class="rarity-opt${this.selectedRarity===r?' active':''}" data-r="${r}" onclick="RewardModal.pickRarity(this,'${r}')">${r}</div>`
-            ).join('')}
+            ${rarityPickerHtml}
           </div>
         </div>
 
@@ -132,7 +142,7 @@ const RewardModal = {
           </div>
         </div>
 
-        <!-- Broadcast message (shows when broadcast=yes) -->
+        <!-- Broadcast message -->
         <div class="field-group" id="broadcastMsgGroup" style="${reward?.broadcast?'':'display:none'}margin-bottom:12px">
           <label class="field-label">Broadcast Message</label>
           <input class="field-input" id="rwBroadcastMsg" value="${reward?.broadcastMessage||'&e{player} &7won &6{reward}&7!'}" placeholder="&e{player} &7won &6{reward}!"/>
@@ -173,37 +183,30 @@ const RewardModal = {
   },
 
   toggleTypeFields() {
-      const type = Utils.qs('#rwType')?.value || 'VANILLA';
-
-      Utils.qs('#rwVanillaGroup').style.display = 'none';
-      Utils.qs('#rwMmoGroup').style.display     = 'none';
-      Utils.qs('#rwIaGroup').style.display      = 'none';
-      Utils.qs('#rwOraxenGroup').style.display  = 'none';
-
-      switch(type) {
-          case 'VANILLA':
-          case 'VANILLA_WITH_COMMANDS':
-              Utils.qs('#rwVanillaGroup').style.display = 'flex';
-              break;
-          case 'COMMAND':
-              // Tidak ada item field, commands only
-              break;
-          case 'MMOITEMS':
-              Utils.qs('#rwMmoGroup').style.display = 'flex';
-              break;
-          case 'ITEMSADDER':
-              Utils.qs('#rwIaGroup').style.display = 'flex';
-              break;
-          case 'ORAXEN':
-              Utils.qs('#rwOraxenGroup').style.display = 'flex';
-              break;
-      }
+    const type = Utils.qs('#rwType')?.value || 'VANILLA';
+    Utils.qs('#rwVanillaGroup').style.display = 'none';
+    Utils.qs('#rwMmoGroup').style.display     = 'none';
+    Utils.qs('#rwIaGroup').style.display      = 'none';
+    Utils.qs('#rwOraxenGroup').style.display  = 'none';
+    switch(type) {
+      case 'VANILLA':
+      case 'VANILLA_WITH_COMMANDS':
+        Utils.qs('#rwVanillaGroup').style.display = 'flex'; break;
+      case 'COMMAND': break;
+      case 'MMOITEMS':   Utils.qs('#rwMmoGroup').style.display    = 'flex'; break;
+      case 'ITEMSADDER': Utils.qs('#rwIaGroup').style.display     = 'flex'; break;
+      case 'ORAXEN':     Utils.qs('#rwOraxenGroup').style.display = 'flex'; break;
+    }
   },
 
   pickRarity(el, rarity) {
     this.selectedRarity = rarity;
-    Utils.qsa('.rarity-opt').forEach(o => o.classList.remove('active'));
-    el.classList.add('active');
+    Utils.qsa('.rarity-opt').forEach(o => {
+      const isActive = o.dataset.r === rarity;
+      o.classList.toggle('active', isActive);
+      const def = State.rarities.find(r => r.id === o.dataset.r);
+      if (def) o.style.background = isActive ? `${def.hexColor}18` : '';
+    });
   },
 
   handleIcon(e) {
@@ -233,48 +236,41 @@ const RewardModal = {
     if (!id || !name) { toast('ID and Display Name are required', 'error'); return; }
 
     const type = Utils.qs('#rwType')?.value || 'VANILLA';
-
     let material = null, amount = 1, mmoItemsType = null, mmoItemsId = null;
     let itemsAdderId = null, oraxenId = null;
 
     switch(type) {
-        case 'VANILLA':
-        case 'VANILLA_WITH_COMMANDS':
-            material = Utils.qs('#rwMat')?.value?.trim() || 'STONE';
-            amount   = parseInt(Utils.qs('#rwAmt')?.value) || 1;
-            break;
-        case 'MMOITEMS':
-            mmoItemsType = Utils.qs('#rwMmoType')?.value?.trim() || null;
-            mmoItemsId   = Utils.qs('#rwMmoId')?.value?.trim() || null;
-            amount       = parseInt(Utils.qs('#rwMmoAmt')?.value) || 1;
-            break;
-        case 'ITEMSADDER':
-            itemsAdderId = Utils.qs('#rwIaId')?.value?.trim() || null;
-            amount       = parseInt(Utils.qs('#rwIaAmt')?.value) || 1;
-            break;
-        case 'ORAXEN':
-            oraxenId = Utils.qs('#rwOraxenId')?.value?.trim() || null;
-            amount   = parseInt(Utils.qs('#rwOraxenAmt')?.value) || 1;
-            break;
+      case 'VANILLA':
+      case 'VANILLA_WITH_COMMANDS':
+        material = Utils.qs('#rwMat')?.value?.trim() || 'STONE';
+        amount   = parseInt(Utils.qs('#rwAmt')?.value) || 1;
+        break;
+      case 'MMOITEMS':
+        mmoItemsType = Utils.qs('#rwMmoType')?.value?.trim() || null;
+        mmoItemsId   = Utils.qs('#rwMmoId')?.value?.trim() || null;
+        amount       = parseInt(Utils.qs('#rwMmoAmt')?.value) || 1;
+        break;
+      case 'ITEMSADDER':
+        itemsAdderId = Utils.qs('#rwIaId')?.value?.trim() || null;
+        amount       = parseInt(Utils.qs('#rwIaAmt')?.value) || 1;
+        break;
+      case 'ORAXEN':
+        oraxenId = Utils.qs('#rwOraxenId')?.value?.trim() || null;
+        amount   = parseInt(Utils.qs('#rwOraxenAmt')?.value) || 1;
+        break;
     }
 
     const reward = {
-        id, displayName: name,
-        rarity:           this.selectedRarity,
-        type,
-        material,
-        amount,
-        mmoItemsType,
-        mmoItemsId,
-        itemsAdderId,
-        oraxenId,
-        weight:           parseFloat(Utils.qs('#rwWeight')?.value) || 10,
-        broadcast:        Utils.qs('#rwBroadcast')?.value === 'true',
-        broadcastMessage: Utils.qs('#rwBroadcastMsg')?.value || '',
-        customModelData:  parseInt(Utils.qs('#rwCmd')?.value) || -1,
-        commands:         (Utils.qs('#rwCmds')?.value || '').split('\n').map(s=>s.trim()).filter(Boolean),
-        lore:             (Utils.qs('#rwLore')?.value || '').split('\n').map(s=>s.trim()).filter(Boolean),
-        iconUrl:          this.iconUrl,
+      id, displayName: name,
+      rarity:           this.selectedRarity,
+      type, material, amount, mmoItemsType, mmoItemsId, itemsAdderId, oraxenId,
+      weight:           parseFloat(Utils.qs('#rwWeight')?.value) || 10,
+      broadcast:        Utils.qs('#rwBroadcast')?.value === 'true',
+      broadcastMessage: Utils.qs('#rwBroadcastMsg')?.value || '',
+      customModelData:  parseInt(Utils.qs('#rwCmd')?.value) || -1,
+      commands:         (Utils.qs('#rwCmds')?.value || '').split('\n').map(s=>s.trim()).filter(Boolean),
+      lore:             (Utils.qs('#rwLore')?.value || '').split('\n').map(s=>s.trim()).filter(Boolean),
+      iconUrl:          this.iconUrl,
     };
 
     this.callback?.(reward);

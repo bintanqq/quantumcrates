@@ -64,24 +64,31 @@ const Utils = {
     return new Date(ts).toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
   },
 
-  /* Rarity helpers */
-  rarityColor(r) {
-    const map = { COMMON:'#aaa', UNCOMMON:'#00d97e', RARE:'#4488ff', EPIC:'#9b59f5', LEGENDARY:'#f5a623', MYTHIC:'#ff44aa' };
-    return map[(r||'').toUpperCase()] || '#aaa';
+
+
+  rarityColor(id) {
+    return State.rarityColor(id);
   },
-  rarityOrder(r) {
-    const o = { COMMON:0, UNCOMMON:1, RARE:2, EPIC:3, LEGENDARY:4, MYTHIC:5 };
-    return o[(r||'').toUpperCase()] ?? 0;
+
+  rarityOrder(id) {
+    return State.rarityOrder(id);
   },
-  rarityIcon(r) {
-    const map = { COMMON:'⬜', UNCOMMON:'🟩', RARE:'🔷', EPIC:'🟣', LEGENDARY:'🟡', MYTHIC:'🩷' };
-    return map[(r||'').toUpperCase()] || '⬜';
+
+  rarityIcon(id) {
+    return State.rarityIcon(id);
   },
+
+  rarityName(id) {
+    return State.rarityName(id);
+  },
+
   materialIcon(mat) {
-    const m = { DIAMOND_SWORD:'⚔️', BOW:'🏹', DIAMOND:'💎', EMERALD:'🟢', GOLD_NUGGET:'🪙',
+    const m = {
+      DIAMOND_SWORD:'⚔️', BOW:'🏹', DIAMOND:'💎', EMERALD:'🟢', GOLD_NUGGET:'🪙',
       GOLD_BLOCK:'🟨', IRON_BLOCK:'⬜', NETHERITE_INGOT:'⚫', NETHER_STAR:'⭐',
       NETHERITE_CHESTPLATE:'🛡️', IRON_SWORD:'🗡️', TRIPWIRE_HOOK:'🔗', PAPER:'📄',
-      BLAZE_ROD:'🔥', ENDER_EYE:'👁️', BEACON:'🔆', TOTEM_OF_UNDYING:'🏺', DEFAULT:'📦' };
+      BLAZE_ROD:'🔥', ENDER_EYE:'👁️', BEACON:'🔆', TOTEM_OF_UNDYING:'🏺', DEFAULT:'📦'
+    };
     return m[(mat||'').toUpperCase()] || m.DEFAULT;
   },
 
