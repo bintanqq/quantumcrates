@@ -67,6 +67,38 @@ public class Crate {
     @SerializedName("openParticle")
     private String openParticle = "FIREWORKS_SPARK";
 
+    @SerializedName("idleAnimation")
+    private AnimationConfig idleAnimation = new AnimationConfig();
+
+    @SerializedName("openAnimation")
+    private AnimationConfig openAnimation = new AnimationConfig();
+
+    public static class AnimationConfig {
+        @SerializedName("type")
+        private String type = "RING";
+
+        @SerializedName("particle")
+        private String particle = "HAPPY_VILLAGER";
+
+        @SerializedName("speed")
+        private double speed = 1.0;
+
+        @SerializedName("radius")
+        private double radius = 1.0;
+
+        @SerializedName("density")
+        private int density = 8; // jumlah particle per frame
+
+        public String getType()     { return type; }
+        public String getParticle() { return particle; }
+        public double getSpeed()    { return speed; }
+        public double getRadius()   { return radius; }
+        public int getDensity()     { return density; }
+    }
+
+    public AnimationConfig getIdleAnimation() { return idleAnimation != null ? idleAnimation : new AnimationConfig(); }
+    public AnimationConfig getOpenAnimation() { return openAnimation != null ? openAnimation : new AnimationConfig(); }
+
     @SerializedName("enabled")
     private boolean enabled = true;
 

@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="css/pages.css"/>
 <link rel="stylesheet" href="css/modals.css"/>
 <link rel="stylesheet" href="css/animations.css"/>
+  <link rel="icon" type="image/png" href="img/LOGO.png"/>
 <style>
 /* ── Magic Link Loading Screen ── */
 .magic-screen{
@@ -227,6 +228,7 @@
 <script src="js/pages/settings.js"></script>
 <script src="js/modals/reward-modal.js"></script>
 <script src="js/modals/preview-modal.js"></script>
+<script src="js/modals/hologram-modal.js"></script>
 <script src="js/app.js"></script>
 
 <script>
@@ -239,48 +241,27 @@
   const params     = new URLSearchParams(window.location.search);
   const magicToken = params.get('token');
 
-  // Bersihkan token dari URL bar (security: jangan sampai token keliatan di history)
   if (magicToken) {
     window.history.replaceState({}, document.title, '/');
   }
 
-  // Server URL = origin saat ini (karena web di-serve dari plugin itu sendiri)
   State.serverUrl = window.location.origin;
 
   if (magicToken) {
-    // Ada magic token → validate ke server
     showMagicScreen('Authenticating...', 'Validating your session token');
+    window.location.href = '/api/auth/magic?token=' + encodeURIComponent(magicToken);
+    return;
+  } else {
+    // Cek session via cookie — biarkan browser kirim cookie otomatis
     try {
-      const res = await fetch('/api/auth/magic?token=' + encodeURIComponent(magicToken));
-      if (res.redirected || res.ok) {
-        // Server set cookie via response header, langsung launch
-        showMagicScreen('Success!', 'Opening your dashboard...');
-        // Ambil JWT dari cookie untuk dipakai di API calls
-        State.jwt = getCookieValue('qc_jwt');
+      const r = await fetch('/api/auth/check', { credentials: 'include' });
+      if (r.ok) {
+        State.jwt = null; // tidak perlu JWT di JS, pakai cookie
         await launchApp();
       } else {
-        const data = await res.json().catch(() => ({}));
-        showMagicError(data.message || 'Token invalid or expired.');
-      }
-    } catch (e) {
-      showMagicError('Cannot connect to server. Make sure the plugin is running.');
-    }
-
-  } else {
-    // Tidak ada magic token — cek apakah ada cookie session yang masih valid
-    const existingJwt = getCookieValue('qc_jwt');
-    if (existingJwt) {
-      State.jwt = existingJwt;
-      try {
-        await fetch('/api/auth/check', { headers: { Authorization: 'Bearer ' + existingJwt } })
-          .then(r => { if (!r.ok) throw new Error('expired'); });
-        await launchApp();
-      } catch {
-        // Session expired → show login
         showLoginScreen();
       }
-    } else {
-      // No session at all → show login
+    } catch {
       showLoginScreen();
     }
   }

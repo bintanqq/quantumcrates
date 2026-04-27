@@ -110,13 +110,12 @@ public class WebServer {
                 ts.add(now);
             }
 
-            // JWT dari header atau cookie
-            String jwt = null;
-            String auth = ctx.header("Authorization");
-            if (auth != null && auth.startsWith("Bearer ")) {
-                jwt = auth.substring(7);
-            } else {
-                jwt = ctx.cookie("qc_jwt");
+            String jwt = ctx.cookie("qc_jwt");
+            if (jwt == null) {
+                String auth = ctx.header("Authorization");
+                if (auth != null && auth.startsWith("Bearer ")) {
+                    jwt = auth.substring(7);
+                }
             }
 
             if (jwt == null) { ctx.status(401).json(err("Not authenticated.")); return; }
@@ -188,11 +187,10 @@ public class WebServer {
                     .withExpiresAt(new Date(System.currentTimeMillis() + 86_400_000L))
                     .sign(jwtAlgorithm);
 
-            // Set JWT sebagai HttpOnly cookie + redirect ke dashboard
-            ctx.cookie("qc_jwt", jwt, 86400); // expires in 24h
             ctx.header("Set-Cookie", "qc_jwt=" + jwt +
                     "; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax");
-            ctx.redirect("/"); // redirect ke index.html
+            ctx.status(302);
+            ctx.header("Location", "/");
         });
     }
 
@@ -391,6 +389,35 @@ public class WebServer {
                 }
                 ctx.json(ok("Pity reset for " + uuid));
             } catch (Exception e) { ctx.status(400).json(err(e.getMessage())); }
+        });
+
+        // GET /api/players/lookup?name=PlayerName
+        app.get("/api/players/lookup", ctx -> {
+            String name = ctx.queryParam("name");
+            if (name == null || name.isEmpty()) {
+                ctx.status(400).json(err("Name is required"));
+                return;
+            }
+            // Cari player online dulu
+            org.bukkit.entity.Player online = Bukkit.getPlayerExact(name);
+            if (online != null) {
+                ctx.json(Map.of(
+                        "uuid", online.getUniqueId().toString(),
+                        "name", online.getName()
+                ));
+                return;
+            }
+            // Kalau offline, cari dari cache
+            @SuppressWarnings("deprecation")
+            org.bukkit.OfflinePlayer offline = Bukkit.getOfflinePlayer(name);
+            if (offline.hasPlayedBefore()) {
+                ctx.json(Map.of(
+                        "uuid", offline.getUniqueId().toString(),
+                        "name", offline.getName() != null ? offline.getName() : name
+                ));
+                return;
+            }
+            ctx.status(404).json(err("Player not found: " + name));
         });
     }
 

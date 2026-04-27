@@ -110,7 +110,6 @@ function LogItem(log) {
 
 /* Pity Bar */
 function PityBar(pity, max, soft) {
-  const pct      = max > 0 ? Math.min(pct, 100) : 0;
   const fillPct  = max > 0 ? (pity / max * 100) : 0;
   const softPct  = max > 0 ? (soft / max * 100) : 0;
   const remaining = max - pity;

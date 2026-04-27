@@ -208,8 +208,99 @@ const Architect = {
           <input class="field-input" type="number" id="cfgMassLimit" value="${crate.massOpenLimit ?? 64}" min="-1"/>
         </div>
       </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div class="section-label" style="margin-bottom:8px">IDLE ANIMATION</div>
+          <div class="field-row">
+              <div class="field-group">
+                  <label class="field-label">Type</label>
+                  <select class="field-input" id="cfgIdleType">
+                      ${['RING','HELIX','SPHERE','SPIRAL','RAIN','NONE'].map(t =>
+                          `<option value="${t}" ${(crate.idleAnimation?.type||'RING')===t?'selected':''}>${t}</option>`
+                      ).join('')}
+                  </select>
+              </div>
+              <div class="field-group">
+                  <label class="field-label">Particle</label>
+                  <select class="field-input" id="cfgIdleParticle">
+                      ${['HAPPY_VILLAGER','FLAME','ENCHANT','SOUL_FIRE_FLAME','DRAGON_BREATH',
+                         'END_ROD','WITCH','GLOW','FIREWORK','TOTEM_OF_UNDYING','SCRAPE'].map(p =>
+                          `<option value="${p}" ${(crate.idleAnimation?.particle||'HAPPY_VILLAGER')===p?'selected':''}>${p}</option>`
+                      ).join('')}
+                  </select>
+              </div>
+          </div>
+          <div class="field-row" style="margin-top:8px">
+              <div class="field-group">
+                  <label class="field-label">Speed</label>
+                  <input class="field-input" type="number" id="cfgIdleSpeed"
+                      value="${crate.idleAnimation?.speed ?? 1.0}" min="0.1" max="5.0" step="0.1"/>
+              </div>
+              <div class="field-group">
+                  <label class="field-label">Radius</label>
+                  <input class="field-input" type="number" id="cfgIdleRadius"
+                      value="${crate.idleAnimation?.radius ?? 1.0}" min="0.2" max="3.0" step="0.1"/>
+              </div>
+              <div class="field-group">
+                  <label class="field-label">Density</label>
+                  <input class="field-input" type="number" id="cfgIdleDensity"
+                      value="${crate.idleAnimation?.density ?? 8}" min="1" max="32"/>
+              </div>
+          </div>
+
+          <div class="section-label" style="margin-top:12px;margin-bottom:8px">OPEN ANIMATION</div>
+          <div class="field-row">
+              <div class="field-group">
+                  <label class="field-label">Type</label>
+                  <select class="field-input" id="cfgOpenType">
+                      ${['RING','HELIX','SPHERE','SPIRAL','RAIN','NONE'].map(t =>
+                          `<option value="${t}" ${(crate.openAnimation?.type||'RING')===t?'selected':''}>${t}</option>`
+                      ).join('')}
+                  </select>
+              </div>
+              <div class="field-group">
+                  <label class="field-label">Particle</label>
+                  <select class="field-input" id="cfgOpenParticle">
+                      ${['FIREWORK','FLAME','ENCHANT','SOUL_FIRE_FLAME','DRAGON_BREATH',
+                         'END_ROD','WITCH','GLOW','HAPPY_VILLAGER','TOTEM_OF_UNDYING'].map(p =>
+                          `<option value="${p}" ${(crate.openAnimation?.particle||'FIREWORK')===p?'selected':''}>${p}</option>`
+                      ).join('')}
+                  </select>
+              </div>
+          </div>
+          <div class="field-row" style="margin-top:8px">
+              <div class="field-group">
+                  <label class="field-label">Speed</label>
+                  <input class="field-input" type="number" id="cfgOpenSpeed"
+                      value="${crate.openAnimation?.speed ?? 1.0}" min="0.1" max="5.0" step="0.1"/>
+              </div>
+              <div class="field-group">
+                  <label class="field-label">Radius</label>
+                  <input class="field-input" type="number" id="cfgOpenRadius"
+                      value="${crate.openAnimation?.radius ?? 1.0}" min="0.2" max="3.0" step="0.1"/>
+              </div>
+          </div>
+      </div>
       <div id="enabledToggle"></div>
       <div id="massOpenToggle"></div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="HologramModal.open()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                  <path d="M2 17l10 5 10-5"/>
+                  <path d="M2 12l10 5 10-5"/>
+              </svg>
+              Edit Hologram
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="Architect.deleteCrate('${crate.id}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                  <path d="M10 11v6M14 11v6"/>
+                  <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+              </svg>
+              Delete Crate
+          </button>
+      </div>
     `;
 
     body.querySelector('#enabledToggle').appendChild(
@@ -228,6 +319,23 @@ const Architect = {
         this.dirty = true;
         this.renderCrateTabs();
       });
+    });
+    ['cfgIdleType','cfgIdleParticle','cfgIdleSpeed','cfgIdleRadius','cfgIdleDensity',
+     'cfgOpenType','cfgOpenParticle','cfgOpenSpeed','cfgOpenRadius'].forEach(id => {
+        Utils.qs('#'+id)?.addEventListener('change', () => {
+            if (!crate.idleAnimation) crate.idleAnimation = {};
+            if (!crate.openAnimation) crate.openAnimation = {};
+            crate.idleAnimation.type     = Utils.qs('#cfgIdleType').value;
+            crate.idleAnimation.particle = Utils.qs('#cfgIdleParticle').value;
+            crate.idleAnimation.speed    = parseFloat(Utils.qs('#cfgIdleSpeed').value);
+            crate.idleAnimation.radius   = parseFloat(Utils.qs('#cfgIdleRadius').value);
+            crate.idleAnimation.density  = parseInt(Utils.qs('#cfgIdleDensity').value);
+            crate.openAnimation.type     = Utils.qs('#cfgOpenType').value;
+            crate.openAnimation.particle = Utils.qs('#cfgOpenParticle').value;
+            crate.openAnimation.speed    = parseFloat(Utils.qs('#cfgOpenSpeed').value);
+            crate.openAnimation.radius   = parseFloat(Utils.qs('#cfgOpenRadius').value);
+            this.dirty = true;
+        });
     });
   },
 
@@ -442,6 +550,26 @@ const Architect = {
       this.loadCrate(State.currentCrateId);
       toast('Changes discarded', 'info');
     }
+  },
+
+  async deleteCrate(id) {
+      if (!confirm(`Hapus crate "${id}" permanen? Tindakan ini tidak bisa dibatalkan.`)) return;
+      try {
+          await API.deleteCrate(id);
+          State.deleteCrate(id);
+          toast(`Crate "${id}" berhasil dihapus.`, 'success');
+          if (State.crateOrder.length > 0) {
+              this.loadCrate(State.crateOrder[0]);
+          } else {
+              State.currentCrateId = null;
+              this.renderCrateTabs();
+              Utils.qs('#architectLeft').innerHTML = '<div class="empty-state"><p>No crates yet. Create one!</p></div>';
+              Utils.qs('#architectRight').innerHTML = '';
+          }
+          this.renderCrateTabs();
+      } catch (e) {
+          toast(e.message, 'error');
+      }
   },
 
   newCrate() {

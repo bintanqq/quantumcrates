@@ -74,19 +74,14 @@ public class WebCommand implements CommandExecutor, TabCompleter {
     }
 
     private String resolveHost(CommandSender sender, String[] args) {
-        // Jika ada argumen pertama, pakai itu sebagai host
+        // Prioritas 1: argumen command (/qc web 103.x.x.x)
         if (args.length >= 1) return args[0];
 
-        // Cek config apakah ada web.host yang diset
-        String configHost = plugin.getConfig().getString("web.host", "");
+        // Prioritas 2: hostname di config (wajib diset untuk hosting/VPS)
+        String configHost = plugin.getConfig().getString("web.hostname", "");
         if (!configHost.isEmpty()) return configHost;
 
-        // Auto-detect IP server
-        try {
-            return InetAddress.getLocalHost().getHostAddress();
-        } catch (Exception e) {
-            return "localhost";
-        }
+        return "localhost";
     }
 
     /**

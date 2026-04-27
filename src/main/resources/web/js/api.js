@@ -5,26 +5,26 @@ const API = {
   headers() {
     return {
       'Content-Type': 'application/json',
-      ...(State.jwt ? { Authorization: 'Bearer ' + State.jwt } : {})
     };
   },
 
   async request(method, path, body) {
-    if (State.demoMode) return Demo.handle(method, path, body);
-    try {
-      const res = await fetch(this.base + path, {
-        method,
-        headers: this.headers(),
-        body: body ? JSON.stringify(body) : undefined
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Request failed');
-      return data;
-    } catch (e) {
-      if (e.name === 'TypeError') throw new Error('Cannot connect to server. Is it running?');
-      throw e;
-    }
-  },
+      if (State.demoMode) return Demo.handle(method, path, body);
+      try {
+        const res = await fetch(this.base + path, {
+          method,
+          headers: this.headers(),
+          credentials: 'include',
+          body: body ? JSON.stringify(body) : undefined
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Request failed');
+        return data;
+      } catch (e) {
+        if (e.name === 'TypeError') throw new Error('Cannot connect to server. Is it running?');
+        throw e;
+      }
+    },
 
   get:    (p)    => API.request('GET',    p),
   post:   (p, b) => API.request('POST',   p, b),

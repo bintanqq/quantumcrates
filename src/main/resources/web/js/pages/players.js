@@ -19,42 +19,73 @@ const Players = {
   },
 
   async lookup() {
-    const input = Utils.qs('#playerUuid')?.value?.trim();
-    if (!input) { toast('Enter a player UUID or name', 'error'); return; }
-    const result = Utils.qs('#playerResult');
-    result.innerHTML = '<div class="card"><div class="skeleton" style="height:120px"></div></div>';
-    try {
-      const pity = await API.getPlayerPity(input);
-      result.innerHTML = '';
-      const card = Utils.el('div', 'card');
-      card.innerHTML = `
-        <div class="card-header"><div class="card-title"><span class="card-accent"></span>PITY DATA — ${input}</div></div>
-        <div id="pityList"></div>
-        <button class="btn btn-danger btn-sm" style="margin-top:10px" onclick="Players.resetAll('${input}')">Reset All Pity</button>
-      `;
-      const list = card.querySelector('#pityList');
-      const pityData = pity.pityData || {};
-      if (!Object.keys(pityData).length) {
-        list.innerHTML = '<div style="color:var(--text3);font-size:12px">No pity data found.</div>';
-      } else {
-        Object.entries(pityData).forEach(([crateId, count]) => {
-          const crate = State.crates[crateId];
-          const max   = crate?.pity?.threshold || 100;
-          const div   = Utils.el('div', '', `
-            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;margin-top:8px">
-              <span style="font-weight:600">${Utils.strip(crate?.displayName || crateId)}</span>
-              <div style="display:flex;gap:6px;align-items:center">
-                <span style="color:var(--cyan)">${count} / ${max}</span>
-                <button class="btn btn-ghost btn-xs" onclick="Players.resetOne('${input}','${crateId}')">Reset</button>
+      const input = Utils.qs('#playerUuid')?.value?.trim();
+      if (!input) { toast('Enter a player name or UUID', 'error'); return; }
+
+      const result = Utils.qs('#playerResult');
+      result.innerHTML = '<div class="card"><div class="skeleton" style="height:120px"></div></div>';
+
+      try {
+          let uuid = input;
+          let playerName = input;
+
+          // Kalau bukan UUID format, lookup dulu by name
+          if (!Utils.isUUID(input)) {
+              const lookup = await API.get('/players/lookup?name=' + encodeURIComponent(input));
+              uuid = lookup.uuid;
+              playerName = lookup.name;
+          }
+
+          const pity = await API.getPlayerPity(uuid);
+          result.innerHTML = '';
+          const card = Utils.el('div', 'card');
+          card.innerHTML = `
+              <div class="card-header">
+                  <div class="card-title">
+                      <span class="card-accent"></span>
+                      PITY DATA — ${playerName}
+                      <span style="font-size:10px;color:var(--text3);font-weight:400">${uuid}</span>
+                  </div>
               </div>
-            </div>
-            <div class="progress"><div class="progress-fill" style="width:${Math.min(count/max*100,100)}%"></div></div>
-          `);
-          list.appendChild(div);
-        });
+              <div id="pityList"></div>
+              <button class="btn btn-danger btn-sm" style="margin-top:10px"
+                  onclick="Players.resetAll('${uuid}')">Reset All Pity</button>
+          `;
+
+          const list = card.querySelector('#pityList');
+          const pityData = pity.pityData || {};
+
+          if (!Object.keys(pityData).length) {
+              list.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0">No pity data found for this player.</div>';
+          } else {
+              Object.entries(pityData).forEach(([crateId, count]) => {
+                  const crate = State.crates[crateId];
+                  const max = crate?.pity?.threshold || 100;
+                  const div = Utils.el('div', '', `
+                      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;margin-top:8px">
+                          <span style="font-weight:600">${Utils.strip(crate?.displayName || crateId)}</span>
+                          <div style="display:flex;gap:6px;align-items:center">
+                              <span style="color:var(--cyan)">${count} / ${max}</span>
+                              <button class="btn btn-ghost btn-xs"
+                                  onclick="Players.resetOne('${uuid}','${crateId}')">Reset</button>
+                          </div>
+                      </div>
+                      <div class="progress">
+                          <div class="progress-fill" style="width:${Math.min(count/max*100,100)}%"></div>
+                      </div>
+                  `);
+                  list.appendChild(div);
+              });
+          }
+          result.appendChild(card);
+
+      } catch (e) {
+          result.innerHTML = `
+              <div class="card">
+                  <div style="color:var(--red);font-size:12px">${e.message}</div>
+              </div>
+          `;
       }
-      result.appendChild(card);
-    } catch (e) { result.innerHTML = `<div class="card"><div style="color:var(--red);font-size:12px">${e.message}</div></div>`; }
   },
 
   async resetOne(uuid, crateId) {
