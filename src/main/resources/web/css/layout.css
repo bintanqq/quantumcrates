@@ -53,17 +53,29 @@
 .btn-full { width: 100%; justify-content: center; }
 
 /* ══ APP SHELL ══ */
-.app-shell { display: flex; height: 100vh; overflow: hidden; background: var(--bg); }
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  /* Padding agar sidebar & topbar tidak nempel ke tepi */
+  padding: 10px;
+  gap: 10px;
+}
 
-/* ══ SIDEBAR ══ */
+/* ══ SIDEBAR — rounded + shadow seperti image ref ══ */
 .sidebar {
   width: var(--sidebar-w);
   min-width: var(--sidebar-w);
   background: var(--sidebar-bg);
-  border-right: 1px solid var(--sidebar-border);
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius-xl);                        /* rounded */
+  box-shadow: 0 4px 24px rgba(0,0,0,.10), 0 1px 6px rgba(0,0,0,.06); /* shadow */
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex-shrink: 0;
+  /* Tidak ada border-right lagi — pakai border penuh */
 }
 .sidebar.collapsed { width: 56px; min-width: 56px; }
 
@@ -105,7 +117,7 @@
   margin: 1px 8px;
   color: var(--sidebar-text2);
   border-radius: var(--radius-sm);
-  transition: background .18s var(--ease-smooth), color .18s var(--ease-smooth), padding .32s var(--ease-smooth);
+  transition: background .22s var(--ease-smooth), color .22s var(--ease-smooth), padding .32s var(--ease-smooth);
   font-weight: 500; font-size: 12px;
   cursor: pointer;
   position: relative;
@@ -166,7 +178,7 @@
   border-radius: var(--radius-sm);
   margin-bottom: 7px;
   overflow: hidden;
-  transition: padding .32s, gap .32s, background .2s;
+  transition: padding .32s, gap .32s, background .22s;
   min-width: 0;
 }
 .server-card:hover { background: rgba(255,255,255,.52); }
@@ -176,14 +188,14 @@
 .server-info { flex: 1; min-width: 0; overflow: hidden; transition: opacity .22s, max-width .32s; opacity: 1; max-width: 200px; }
 .server-name { font-size: 11px; font-weight: 600; color: var(--sidebar-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .server-meta { font-size: 9.5px; color: var(--sidebar-text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.server-refresh { color: var(--sidebar-text3); padding: 3px; border-radius: 4px; transition: color .2s, opacity .22s, width .32s; flex-shrink: 0; overflow: hidden; }
+.server-refresh { color: var(--sidebar-text3); padding: 3px; border-radius: 4px; transition: color .22s, opacity .22s, width .32s; flex-shrink: 0; overflow: hidden; }
 .server-refresh:hover { color: var(--sidebar-text); }
 .btn-logout {
   display: flex; align-items: center; gap: 7px;
   width: 100%; padding: 7px 10px;
   border-radius: var(--radius-sm);
   color: var(--sidebar-text2); font-size: 11px; font-weight: 600;
-  transition: all .2s, padding .32s, gap .32s;
+  transition: all .22s, padding .32s, gap .32s;
   overflow: hidden; white-space: nowrap;
 }
 .btn-logout:hover { color: var(--red); background: rgba(192,57,43,.1); }
@@ -196,22 +208,30 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; appear
 input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 /* ══ MAIN AREA ══ */
-.main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  gap: 10px;
+}
 
-/* ══ TOPBAR ══ */
+/* ══ TOPBAR — rounded seperti image ref ══ */
 .topbar {
   display: flex; align-items: center; gap: 12px;
   padding: 0 20px;
   height: var(--topbar-h);
-  border-bottom: 1px solid var(--border);
   background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);                         /* rounded */
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
   flex-shrink: 0;
-  box-shadow: 0 1px 0 var(--border), 0 2px 8px rgba(0,0,0,.03);
 }
 .topbar-left { display: flex; align-items: center; gap: 10px; flex: 1; }
 .sidebar-toggle {
   color: var(--text3); padding: 6px; border-radius: var(--radius-sm);
-  transition: all .2s var(--ease-smooth);
+  transition: all .22s var(--ease-smooth);
 }
 .sidebar-toggle:hover { color: var(--text); background: var(--bg3); }
 .breadcrumb-page { font-size: 13.5px; font-weight: 700; color: var(--text); }
@@ -228,57 +248,75 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .tstat-label { font-size: 7.5px; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; }
 .tstat-sep { width: 1px; background: var(--border); align-self: stretch; }
 
-/* ══ PAGE HEADER BANNERS — customizable per page ── */
+/* ══ PAGE HEADER BANNERS ══
+   - Rounded corners, margin dari sisi kiri/kanan agar tidak mepet
+   - Background pakai image dari /img/ (tanpa dot pattern)
+   - Ukuran image disesuaikan agar bisa di-design sendiri
+*/
 .page-header {
   position: relative;
-  margin: -20px -20px 20px;
-  padding: 28px 24px 22px;
+  border-radius: var(--radius-xl);                        /* rounded seperti ref */
+  padding: 28px 28px 24px;
   overflow: hidden;
+  margin-bottom: 20px;
+  /* TIDAK ada margin negatif — sudah ada di dalam page dengan padding */
+
+  /* Default (architect) — image dari /img/banner-architect.png */
+  background:
+    linear-gradient(135deg, rgba(26,122,74,.82) 0%, rgba(10,61,37,.92) 60%, rgba(5,35,20,.97) 100%),
+    url('../img/banner-architect.png') center/cover no-repeat;
+  /* Fallback kalau image belum ada */
+  background-color: #0F5232;
 }
 
-/* Default (architect) */
-.page-header {
-  background: linear-gradient(135deg, #1A7A4A 0%, #0F5232 55%, #0A3D25 100%);
-}
 /* Analytics */
 .page-header.header-analytics {
-  background: linear-gradient(135deg, #1A4A8A 0%, #0F3060 55%, #0A1F45 100%);
-}
-/* Keys */
-.page-header.header-keys {
-  background: linear-gradient(135deg, #7A5A1A 0%, #5C3F0A 55%, #3D2A06 100%);
-}
-/* Messages */
-.page-header.header-messages {
-  background: linear-gradient(135deg, #4A1A7A 0%, #300F5C 55%, #210A3D 100%);
-}
-/* Players */
-.page-header.header-players {
-  background: linear-gradient(135deg, #1A6A7A 0%, #0F4A5C 55%, #0A303D 100%);
-}
-/* Settings */
-.page-header.header-settings {
-  background: linear-gradient(135deg, #3A3A4A 0%, #22222F 55%, #14141E 100%);
+  background:
+    linear-gradient(135deg, rgba(26,74,138,.82) 0%, rgba(10,45,90,.92) 60%, rgba(5,25,60,.97) 100%),
+    url('../img/banner-analytics.png') center/cover no-repeat;
+  background-color: #0F3060;
 }
 
-/* Dot pattern overlay */
-.page-header::before {
-  content: '';
-  position: absolute; inset: 0;
-  background-image: radial-gradient(circle, rgba(255,255,255,.08) 1px, transparent 1px);
-  background-size: 22px 22px;
-  pointer-events: none;
+/* Keys */
+.page-header.header-keys {
+  background:
+    linear-gradient(135deg, rgba(122,90,26,.82) 0%, rgba(80,55,10,.92) 60%, rgba(50,35,5,.97) 100%),
+    url('../img/banner-keys.png') center/cover no-repeat;
+  background-color: #5C3F0A;
 }
-/* Soft glow blob */
-.page-header::after {
-  content: '';
-  position: absolute;
-  right: -60px; top: -60px;
-  width: 220px; height: 220px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.05);
-  pointer-events: none;
+
+/* Messages */
+.page-header.header-messages {
+  background:
+    linear-gradient(135deg, rgba(74,26,122,.82) 0%, rgba(45,10,85,.92) 60%, rgba(25,5,55,.97) 100%),
+    url('../img/banner-messages.png') center/cover no-repeat;
+  background-color: #300F5C;
 }
+
+/* Players */
+.page-header.header-players {
+  background:
+    linear-gradient(135deg, rgba(26,106,122,.82) 0%, rgba(10,70,88,.92) 60%, rgba(5,45,60,.97) 100%),
+    url('../img/banner-players.png') center/cover no-repeat;
+  background-color: #0F4A5C;
+}
+
+/* Settings */
+.page-header.header-settings {
+  background:
+    linear-gradient(135deg, rgba(58,58,74,.82) 0%, rgba(34,34,47,.92) 60%, rgba(20,20,30,.97) 100%),
+    url('../img/banner-settings.png') center/cover no-repeat;
+  background-color: #22222F;
+}
+
+/* Hapus dot pattern (::before) dan glow blob (::after) */
+.page-header::before { display: none; }
+.page-header::after  { display: none; }
+
+/* Ukuran banner image yang direkomendasikan:
+   Lebar: 1200–1600px  ×  Tinggi: 240–320px
+   Format: PNG atau WebP
+   Letakkan di: src/main/resources/web/img/banner-<nama>.png */
 
 .page-header-inner {
   position: relative;
@@ -288,7 +326,15 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 }
 .page-title { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -.2px; }
 .page-sub { font-size: 11.5px; color: rgba(255,255,255,.68); margin-top: 3px; }
-.page-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: flex-start; }
+
+/* ── Page Actions — posisi tombol konsisten di semua halaman ── */
+.page-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  align-items: center;   /* vertikal center seperti image ref */
+  margin-top: 4px;       /* sedikit turun dari top */
+}
 
 /* ══ PAGE CONTAINER ══ */
 .page-container { flex: 1; overflow: hidden; position: relative; }

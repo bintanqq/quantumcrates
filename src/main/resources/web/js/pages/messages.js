@@ -21,7 +21,7 @@ const Messages = {
         </div>
       </div>
 
-      <div style="display:flex;align-items:center;gap:0;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:0;margin-bottom:14px">
         <div class="seg-ctrl" id="msgTabCtrl">
           <div class="seg-opt active" data-tab="chat" onclick="Messages.switchTab('chat')">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
@@ -39,16 +39,18 @@ const Messages = {
         </div>
       </div>
 
-      <div id="chatTabDesc" style="margin-bottom:13px;padding:11px 15px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11.5px;color:var(--text2);line-height:1.7">
+      <!-- Description banner -->
+      <div id="chatTabDesc" style="margin-bottom:14px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11.5px;color:var(--text2);line-height:1.7">
         <strong style="color:var(--text)">Chat Messages</strong> — shown in player chat with prefix.<br/>
         Placeholders: <code style="color:var(--cyan)">{player}</code> <code style="color:var(--cyan)">{crate}</code> <code style="color:var(--cyan)">{reward}</code> <code style="color:var(--cyan)">{key}</code> <code style="color:var(--cyan)">{amount}</code> <code style="color:var(--cyan)">{time}</code> <code style="color:var(--cyan)">{count}</code>
       </div>
-      <div id="guiTabDesc" style="display:none;margin-bottom:13px;padding:11px 15px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11.5px;color:var(--text2);line-height:1.7">
+      <div id="guiTabDesc" style="display:none;margin-bottom:14px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11.5px;color:var(--text2);line-height:1.7">
         <strong style="color:var(--text)">GUI Messages</strong> — inventory item names, lore lines, and button labels.<br/>
         Placeholders: <code style="color:var(--cyan)">{crate}</code> <code style="color:var(--cyan)">{page}</code> <code style="color:var(--cyan)">{pages}</code> <code style="color:var(--cyan)">{chance}</code> <code style="color:var(--cyan)">{rarity}</code> <code style="color:var(--cyan)">{pity}</code>
       </div>
 
-      <div class="msg-grid" id="msgGrid">
+      <!-- Grid utama — diisi oleh renderGrid() -->
+      <div id="msgContent">
         <div class="empty-state">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <p>Loading messages...</p>
@@ -65,7 +67,11 @@ const Messages = {
       if (res.chat && res.gui) { this.chatData = res.chat; this.guiData = res.gui; }
       else { this.chatData = res; this.guiData = {}; }
       this.renderGrid();
-    } catch (e) { this.chatData = DEMO_MESSAGES; this.guiData = DEMO_GUI_MESSAGES; this.renderGrid(); }
+    } catch (e) {
+      this.chatData = DEMO_MESSAGES;
+      this.guiData  = DEMO_GUI_MESSAGES;
+      this.renderGrid();
+    }
   },
 
   switchTab(tab) {
@@ -78,63 +84,185 @@ const Messages = {
 
   filterGrid(query) {
     const q = query.toLowerCase();
-    Utils.qsa('#msgGrid .msg-item').forEach(item => {
+    Utils.qsa('#msgContent .msg-item').forEach(item => {
       const key = item.querySelector('.msg-key')?.textContent || '';
       item.style.display = key.toLowerCase().includes(q) ? '' : 'none';
+    });
+    // Sembunyikan section header kalau semua item di bawahnya hidden
+    Utils.qsa('#msgContent .msg-section-card').forEach(section => {
+      const items = section.querySelectorAll('.msg-item');
+      const anyVisible = [...items].some(i => i.style.display !== 'none');
+      section.style.display = anyVisible ? '' : 'none';
     });
   },
 
   renderGrid() {
-    const grid = Utils.qs('#msgGrid'); if (!grid) return;
-    grid.innerHTML = '';
-    const data = this.activeTab === 'chat' ? this.chatData : this.guiData;
+    const content = Utils.qs('#msgContent');
+    if (!content) return;
+    content.innerHTML = '';
+
+    const data    = this.activeTab === 'chat' ? this.chatData : this.guiData;
     const entries = Object.entries(data);
-    if (!entries.length) { grid.innerHTML = '<div class="empty-state"><p>No messages found.</p></div>'; return; }
+
+    if (!entries.length) {
+      content.innerHTML = '<div class="empty-state"><p>No messages found.</p></div>';
+      return;
+    }
+
     const groups = this._groupEntries(entries);
+
     groups.forEach(([groupName, groupEntries]) => {
-      if (groupName) {
-        const header = Utils.el('div', '', `<div style="grid-column:1/-1;padding:8px 0 4px;font-size:9.5px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:4px">${groupName}</div>`);
-        grid.appendChild(header);
-      }
-      groupEntries.forEach(([key, val]) => {
+      // Bungkus tiap group dalam card sendiri agar tidak ada jarak aneh
+      const section = Utils.el('div', 'msg-section-card');
+      section.style.cssText = `
+        background:var(--bg2);
+        border:1px solid var(--border);
+        border-radius:var(--radius);
+        margin-bottom:12px;
+        overflow:hidden;
+      `;
+
+      // Section header di dalam card
+      const header = Utils.el('div');
+      header.style.cssText = `
+        padding: 9px 14px 8px;
+        font-size: 9.5px;
+        font-weight: 700;
+        color: var(--text3);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        background: var(--bg3);
+        border-bottom: 1px solid var(--border);
+      `;
+      header.textContent = groupName;
+      section.appendChild(header);
+
+      // Grid 2-kolom di dalam section
+      const grid = Utils.el('div', 'msg-grid-inner');
+      grid.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0;
+      `;
+
+      groupEntries.forEach(([key, val], idx) => {
         const item = Utils.el('div', 'msg-item');
+        // border antar item - kanan dan bawah
+        const isLastRow = idx >= groupEntries.length - (groupEntries.length % 2 === 0 ? 2 : 1);
+        const isRightCol = idx % 2 === 1;
+        item.style.cssText = `
+          padding: 10px 14px 10px;
+          border-right: ${!isRightCol ? '1px solid var(--border)' : 'none'};
+          border-bottom: ${!isLastRow ? '1px solid var(--border)' : 'none'};
+        `;
+
         const rows = (val.length > 60 || val.includes('\\n')) ? 2 : 1;
-        item.innerHTML = `<div class="msg-key">${key}</div><textarea class="msg-input" data-key="${key}" rows="${rows}" style="resize:vertical">${val}</textarea><div class="msg-preview">${Utils.mc(val) || '<span style="opacity:.3">empty</span>'}</div>`;
+        item.innerHTML = `
+          <div class="msg-key">${key}</div>
+          <textarea class="msg-input" data-key="${key}" rows="${rows}">${val}</textarea>
+          <div class="msg-preview">${Utils.mc(val) || '<span style="opacity:.3">empty</span>'}</div>
+        `;
+
         const ta = item.querySelector('textarea');
         ta.oninput = () => {
-          ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px';
+          ta.style.height = 'auto';
+          ta.style.height = ta.scrollHeight + 'px';
           if (this.activeTab === 'chat') this.chatData[key] = ta.value;
           else                           this.guiData[key]  = ta.value;
-          item.querySelector('.msg-preview').innerHTML = Utils.mc(ta.value) || '<span style="opacity:.3">empty</span>';
+          item.querySelector('.msg-preview').innerHTML =
+            Utils.mc(ta.value) || '<span style="opacity:.3">empty</span>';
           this.dirty = true;
         };
-        setTimeout(() => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }, 0);
+        setTimeout(() => {
+          ta.style.height = 'auto';
+          ta.style.height = ta.scrollHeight + 'px';
+        }, 0);
+
         grid.appendChild(item);
       });
+
+      // Kalau item ganjil, tambah placeholder biar grid rata
+      if (groupEntries.length % 2 !== 0) {
+        const placeholder = Utils.el('div');
+        placeholder.style.cssText = 'padding:10px 14px;background:var(--bg3);';
+        grid.appendChild(placeholder);
+      }
+
+      section.appendChild(grid);
+      content.appendChild(section);
     });
   },
 
   _groupEntries(entries) {
+    // Mapping prefix → nama group yang rapi
+    const groupLabels = {
+      prefix:    'General',
+      no:        'General',
+      player:    'General',
+      invalid:   'General',
+      reload:    'General',
+      crate:     'Crate',
+      cooldown:  'Crate',
+      reward:    'Rewards',
+      broadcast: 'Rewards',
+      key:       'Keys',
+      mass:      'Keys',
+      pity:      'Pity',
+      preview:   'Preview GUI',
+      prev:      'Preview GUI',
+      next:      'Preview GUI',
+      close:     'Preview GUI',
+      info:      'Info Command',
+      help:      'Help Command',
+    };
+
+    // Urutan group yang diinginkan
+    const groupOrder = [
+      'General', 'Crate', 'Rewards', 'Keys', 'Pity',
+      'Preview GUI', 'Info Command', 'Help Command',
+    ];
+
     const groupMap = new Map();
+
     entries.forEach(([key, val]) => {
-      const group = key.split('-')[0];
-      const groupLabels = { prefix:'General',no:'General',player:'General',invalid:'General',reload:'General',crate:'Crate',cooldown:'Crate',reward:'Rewards',broadcast:'Rewards',key:'Keys',mass:'Keys',pity:'Pity',preview:'Preview GUI',prev:'Preview GUI',next:'Preview GUI',close:'Preview GUI',info:'Info Command',help:'Help Command' };
-      const label = groupLabels[group] || group.charAt(0).toUpperCase() + group.slice(1);
+      const prefix = key.split('-')[0];
+      const label  = groupLabels[prefix]
+        || (prefix.charAt(0).toUpperCase() + prefix.slice(1));
       if (!groupMap.has(label)) groupMap.set(label, []);
       groupMap.get(label).push([key, val]);
     });
-    return [...groupMap.entries()].sort(([a],[b]) => a.localeCompare(b));
+
+    // Sort sesuai urutan yang diinginkan, sisanya alphabetical
+    return [...groupMap.entries()].sort(([a], [b]) => {
+      const ia = groupOrder.indexOf(a);
+      const ib = groupOrder.indexOf(b);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return  1;
+      return a.localeCompare(b);
+    });
   },
 
   async save() {
     const btn = Utils.qs('#btnSaveMessages');
-    btn.disabled = true; btn.innerHTML = `<svg class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 00-9-9"/></svg> Saving...`;
-    try { await API.saveMessages({ chat: this.chatData, gui: this.guiData }); this.dirty = false; toast('Messages saved & applied to server', 'success'); }
-    catch (e) { toast(e.message, 'error'); }
-    finally { btn.disabled = false; btn.innerHTML = `${ICONS.diskSave} Save Messages`; }
+    if (!btn) return;
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 00-9-9"/></svg> Saving...`;
+    try {
+      await API.saveMessages({ chat: this.chatData, gui: this.guiData });
+      this.dirty = false;
+      toast('Messages saved & applied to server', 'success');
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `${ICONS.diskSave} Save Messages`;
+    }
   },
 
-  reset() { if (confirm('Reload messages from server? Unsaved changes will be lost.')) this.load(); },
+  reset() {
+    if (confirm('Reload messages from server? Unsaved changes will be lost.')) this.load();
+  },
 };
 
 /* ── Demo GUI messages (shown in demo mode / fallback) ── */
