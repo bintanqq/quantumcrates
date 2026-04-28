@@ -1,22 +1,43 @@
 /* ══ SHARED COMPONENTS ══ */
 
+/* SVG icons by reward type */
+const REWARD_TYPE_SVGS = {
+  VANILLA: `<svg class="rc-icon-vanilla" viewBox="0 0 24 24" stroke-width="1.6" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`,
+  VANILLA_WITH_COMMANDS: `<svg class="rc-icon-vanilla" viewBox="0 0 24 24" stroke-width="1.6" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><line x1="12" y1="22.08" x2="12" y2="12"/><line x1="16" y1="3.5" x2="16" y2="9"/></svg>`,
+  COMMAND: `<svg class="rc-icon-command" viewBox="0 0 24 24" stroke-width="1.6" xmlns="http://www.w3.org/2000/svg"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>`,
+  MMOITEMS: `<svg class="rc-icon-mmoitems" viewBox="0 0 24 24" stroke-width="1.6" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  ITEMSADDER: `<svg class="rc-icon-itemsadder" viewBox="0 0 24 24" stroke-width="1.6" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`,
+  ORAXEN: `<svg class="rc-icon-oraxen" viewBox="0 0 24 24" stroke-width="1.6" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+};
+
+function getRewardTypeLabel(type) {
+  const labels = {
+    VANILLA: 'Item',
+    VANILLA_WITH_COMMANDS: 'Item+Cmd',
+    COMMAND: 'Command',
+    MMOITEMS: 'MMOItems',
+    ITEMSADDER: 'ItemsAdder',
+    ORAXEN: 'Oraxen',
+  };
+  return labels[type] || type;
+}
+
 /* Reward Card */
 function RewardCard(reward, totalWeight, onClick, onRemove) {
   const pct   = Utils.chance(reward.weight, totalWeight);
   const color = Utils.rarityColor(reward.rarity);
-  const icon  = reward.iconUrl
-    ? `<img src="${reward.iconUrl}" alt=""/>`
-    : `<span style="font-size:26px">${Utils.materialIcon(reward.material)}</span>`;
+  const svgIcon = REWARD_TYPE_SVGS[reward.type] || REWARD_TYPE_SVGS.VANILLA;
 
   const div = Utils.el('div', 'reward-card');
   div.dataset.id = reward.id;
   div.innerHTML = `
     <button class="rc-remove" title="Remove">✕</button>
     <div class="rc-icon">
-      ${icon}
+      ${svgIcon}
       <div class="rc-rarity-bar" style="background:${color}"></div>
     </div>
     <div class="rc-name">${Utils.strip(reward.displayName) || reward.id}</div>
+    <div class="rc-type-label">${getRewardTypeLabel(reward.type)}</div>
     <div class="rc-weight">${Utils.fmtChance(pct)}</div>
   `;
   div.onclick = (e) => { if (!e.target.classList.contains('rc-remove')) onClick?.(reward); };
@@ -28,134 +49,56 @@ function RewardCard(reward, totalWeight, onClick, onRemove) {
 function AddCard(onClick) {
   const div = Utils.el('div', 'add-card');
   div.innerHTML = `
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
     <span>Add Reward</span>
   `;
   div.onclick = onClick;
   return div;
 }
 
-/**
- * SliderRow — weight slider yang bisa di-drag smooth.
- *
- * Fix utama untuk drag issue:
- * 1. Gunakan pointer events (onpointerdown/move/up) bukan mouse events —
- *    ini unified untuk mouse + touch tanpa perlu dua handler terpisah.
- * 2. setPointerCapture() memastikan elemen tetap menerima events meski
- *    pointer keluar dari bounds (penyebab utama "click-only" behavior).
- * 3. preventDefault() pada pointermove mencegah browser scroll/pan
- *    menginterrupt drag.
- * 4. touch-action: none di CSS (sudah ada di components.css) — wajib
- *    agar browser tidak intercept touch scroll.
- * 5. Kalkulasi value dari posisi pointer, bukan dari .value input,
- *    biar smooth tanpa stepping artifact.
- */
+/* SliderRow — weight input */
 function SliderRow(reward, totalWeight, onChange) {
   const color = Utils.rarityColor(reward.rarity);
-  const div = Utils.el('div', 'slider-row');
+  const div = Utils.el('div');
   div.dataset.id = reward.id;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 120px 80px 80px;gap:8px;align-items:center;padding:7px 4px;border-radius:5px;transition:background .12s';
+  div.onmouseenter = () => div.style.background = 'var(--bg3)';
+  div.onmouseleave = () => div.style.background = '';
 
-  /* ── Bangun HTML dulu ── */
-  div.innerHTML = `
-    <div class="slider-name">
-      <span class="slider-rarity-dot" style="background:${color};box-shadow:0 0 5px ${color}60"></span>
-      ${Utils.strip(reward.displayName) || reward.id}
-    </div>
-    <div class="slider-track-wrap">
-      <div class="slider-track">
-        <div class="slider-fill" style="width:0%"></div>
-        <div class="slider-thumb"></div>
-      </div>
-    </div>
-    <div class="slider-controls">
-      <button class="slider-btn" data-action="minus">−</button>
-      <input class="slider-val" type="number" min="0.1" step="0.5" value="${reward.weight}" inputmode="decimal"/>
-      <button class="slider-btn" data-action="plus">+</button>
-    </div>
-  `;
+  const nameEl = Utils.el('div');
+  nameEl.style.cssText = 'display:flex;align-items:center;gap:7px;font-size:12px;font-weight:500;overflow:hidden';
+  nameEl.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${Utils.strip(reward.displayName) || reward.id}</span>`;
 
-  const trackWrap = div.querySelector('.slider-track-wrap');
-  const track     = div.querySelector('.slider-track');
-  const fill      = div.querySelector('.slider-fill');
-  const thumb     = div.querySelector('.slider-thumb');
-  const numIn     = div.querySelector('.slider-val');
+  const wtWrap = Utils.el('div');
+  wtWrap.style.cssText = 'display:flex;align-items:center;gap:4px';
+  const minus = Utils.el('button', 'wt-btn'); minus.textContent = '−';
+  const inp = document.createElement('input');
+  inp.type = 'number'; inp.className = 'field-input'; inp.value = reward.weight.toFixed(1);
+  inp.style.cssText = 'width:54px;padding:4px 6px;font-size:12px;font-weight:600;text-align:center';
+  const plus = Utils.el('button', 'wt-btn'); plus.textContent = '+';
 
-  const MIN = 0.1, MAX = 50;
+  const chanceEl = Utils.el('div');
+  chanceEl.style.cssText = 'font-size:12px;font-weight:700;color:var(--cyan)';
+  chanceEl.textContent = Utils.fmtChance(Utils.chance(reward.weight, totalWeight));
 
-  /* ── Update visual dari value ── */
-  function renderValue(val) {
-    const clamped = Math.max(MIN, Math.min(MAX, val));
-    const pct     = ((clamped - MIN) / (MAX - MIN)) * 100;
-    fill.style.width        = pct + '%';
-    fill.style.background   = color;
-    thumb.style.left        = pct + '%';
-    thumb.style.borderColor = color;
-    thumb.style.boxShadow   = `0 0 0 3px ${color}40`;
-    numIn.value = clamped.toFixed(1);
-  }
-
-  /* ── Apply value ke reward + fire callback ── */
-  function applyValue(raw) {
-    const val = Math.max(MIN, Math.min(MAX, parseFloat(raw) || MIN));
-    reward.weight = parseFloat(val.toFixed(1));
-    renderValue(val);
+  const applyW = (val) => {
+    reward.weight = parseFloat(Math.max(0.1, Math.min(9999, val)).toFixed(1));
+    inp.value = reward.weight.toFixed(1);
+    const newTw = totalWeight;
+    chanceEl.textContent = Utils.fmtChance(Utils.chance(reward.weight, newTw));
     onChange?.(reward);
-  }
+  };
+  minus.onclick = () => applyW(reward.weight - 0.5);
+  plus.onclick  = () => applyW(reward.weight + 0.5);
+  inp.onchange  = () => applyW(parseFloat(inp.value) || 0.1);
 
-  /* ── Initial render ── */
-  renderValue(reward.weight);
+  wtWrap.appendChild(minus); wtWrap.appendChild(inp); wtWrap.appendChild(plus);
 
-  /* ──────────────────────────────────────────────────────────────
-     POINTER-BASED DRAG (works for mouse AND touch)
-     Key: setPointerCapture → events continue even outside element
-     ────────────────────────────────────────────────────────────── */
-  let dragging = false;
+  const rarityEl = Utils.el('div');
+  rarityEl.style.cssText = `font-size:10px;font-weight:700;color:${color}`;
+  rarityEl.textContent = reward.rarity;
 
-  function valueFromPointerX(clientX) {
-    const rect  = track.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    return MIN + ratio * (MAX - MIN);
-  }
-
-  track.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return;
-    dragging = true;
-    track.setPointerCapture(e.pointerId);
-    e.preventDefault();
-    e.stopPropagation();
-    applyValue(valueFromPointerX(e.clientX));
-  });
-
-  track.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
-    e.preventDefault();
-    e.stopPropagation();       // ← ini juga
-    applyValue(valueFromPointerX(e.clientX));
-  });
-
-  track.addEventListener('pointerup', (e) => {
-    if (!dragging) return;
-    dragging = false;
-    track.releasePointerCapture(e.pointerId);
-  });
-
-  track.addEventListener('pointercancel', (e) => {
-    dragging = false;
-    track.releasePointerCapture(e.pointerId);
-  });
-
-  /* ── Number input ── */
-  numIn.addEventListener('change', () => applyValue(numIn.value));
-  numIn.addEventListener('input', () => {
-    if (numIn.value !== '' && !isNaN(numIn.value)) {
-      renderValue(parseFloat(numIn.value)); // live visual only — apply on change
-    }
-  });
-
-  /* ── +/- buttons ── */
-  div.querySelector('[data-action="minus"]').addEventListener('click', () => applyValue(reward.weight - 0.5));
-  div.querySelector('[data-action="plus"]').addEventListener('click',  () => applyValue(reward.weight + 0.5));
-
+  div.appendChild(nameEl); div.appendChild(wtWrap); div.appendChild(chanceEl); div.appendChild(rarityEl);
   return div;
 }
 
@@ -164,15 +107,14 @@ function LogItem(log) {
   const crate  = State.crates[log.crateId];
   const reward = crate?.rewards?.find(r => r.id === log.rewardId);
   const rarity = (reward?.rarity || 'COMMON').toLowerCase();
-  const icon   = reward?.iconUrl
-    ? `<img src="${reward.iconUrl}" style="width:18px;height:18px;image-rendering:pixelated;" alt=""/>`
-    : Utils.materialIcon(reward?.material);
+  const type   = reward?.type || 'VANILLA';
+  const svgIcon = REWARD_TYPE_SVGS[type] || REWARD_TYPE_SVGS.VANILLA;
   const isPity = log.pityAtOpen > 0 && crate?.pity?.enabled && log.pityAtOpen >= crate.pity.threshold - 1;
 
   const div = Utils.el('div', 'log-item');
   div.innerHTML = `
     <span class="log-time">${Utils.timeStr(log.timestamp)}</span>
-    <div class="log-avatar">${icon}</div>
+    <div class="log-avatar">${svgIcon}</div>
     <div class="log-body">
       <div class="log-player">${log.playerName} <span style="color:var(--text3);font-weight:400">opened</span> ${Utils.strip(crate?.displayName || log.crateId)}</div>
       <div class="log-reward ${rarity}">
@@ -193,12 +135,15 @@ function PityBar(pity, max, soft) {
   const div = Utils.el('div', 'pity-bar-card');
   div.innerHTML = `
     <div class="pity-bar-header">
-      <div class="pity-bar-label">🏆 Pity Counter</div>
+      <div class="pity-bar-label">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Pity Counter
+      </div>
       <div class="pity-bar-val">${pity} / ${max}</div>
     </div>
     <div class="pity-track">
       <div class="pity-fill" style="width:${fillPct}%"></div>
-      <div class="pity-soft-marker" style="left:${softPct}%" title="Soft pity start"></div>
+      <div class="pity-soft-marker" style="left:${softPct}%"></div>
     </div>
     <div class="pity-desc"><strong>${remaining} opens</strong> until next guaranteed rare!</div>
   `;
@@ -206,10 +151,10 @@ function PityBar(pity, max, soft) {
 }
 
 /* Stat Card */
-function StatCard(icon, val, label, delta, iconBg) {
+function StatCard(iconSvg, val, label, delta, iconBg) {
   const div = Utils.el('div', 'stat-card');
   div.innerHTML = `
-    <div class="stat-icon" style="background:${iconBg || 'var(--bg2)'}">${icon}</div>
+    <div class="stat-icon" style="background:${iconBg || 'var(--bg3)'}">${iconSvg}</div>
     <div class="stat-val">${val}</div>
     <div class="stat-label">${label}</div>
     ${delta ? `<div class="stat-delta ${delta > 0 ? 'up' : 'down'}">${delta > 0 ? '↑' : '↓'} ${Math.abs(delta)}%</div>` : ''}

@@ -1,102 +1,74 @@
 :root {
-  --bg:    #010d1f;
-  --bg2:   #021428;
-  --bg3:   #042038;
-  --surface:  #052540;
-  --surface2: #073050;
+  --bg:      #F2F2F2;
+  --bg2:     #FFFFFF;
+  --bg3:     #EBEBEB;
+  --surface:  #FFFFFF;
+  --surface2: #F7F7F7;
 
-  --border:  #0a3a5e;
-  --border2: #0d4a78;
-  --border3: #105a90;
+  --sidebar-bg:  #B9E4C9;
+  --sidebar-bg2: #A8DCBA;
+  --sidebar-bg3: #97D4AB;
 
-  --cyan:  #004aad;
-  --cyan2: #0056cc;
-  --cyan3: #0062eb;
-  --cyan-glow: rgba(0,74,173,.28);
-  --cyan-dim:  rgba(0,74,173,.08);
-  --cyan-dim2: rgba(0,74,173,.15);
+  --border:  #D8D8D8;
+  --border2: #C4C4C4;
+  --border3: #ADADAD;
 
-  --text:  #f9f6ee;
-  --text2: #b8ccd8;
-  --text3: #6a90a8;
-  --text4: #3d6278;
+  --sidebar-border:  rgba(0,0,0,.1);
+  --sidebar-border2: rgba(0,0,0,.15);
 
-  /* ── Semantics ── */
-  --gold:       #f5c842;
-  --gold-dim:   rgba(245,200,66,.12);
-  --green:      #22d98a;
-  --green-dim:  rgba(34,217,138,.1);
-  --red:        #ff4d6d;
-  --red-dim:    rgba(255,77,109,.1);
-  --purple:     #8b5cf6;
-  --purple-dim: rgba(139,92,246,.1);
-  --blue:       #3b82f6;
-  --blue-dim:   rgba(59,130,246,.1);
+  --cyan:  #1A7A4A;
+  --cyan2: #156640;
+  --cyan3: #0F5232;
+  --cyan-glow: rgba(26,122,74,.2);
+  --cyan-dim:  rgba(26,122,74,.08);
+  --cyan-dim2: rgba(26,122,74,.14);
 
-  /* ── Rarity ── */
-  --r-common:    #9ca3af;
-  --r-uncommon:  #22d98a;
-  --r-rare:      #3b82f6;
-  --r-epic:      #8b5cf6;
-  --r-legendary: #f5c842;
-  --r-mythic:    #ff44aa;
+  --text:  #1A1A1A;
+  --text2: #444444;
+  --text3: #777777;
+  --text4: #AAAAAA;
 
-  /* ── Shape ── */
-  --radius:    12px;
-  --radius-sm: 8px;
-  --radius-xs: 5px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --sidebar-text:  #0D3D22;
+  --sidebar-text2: #1F5C35;
+  --sidebar-text3: #3A7A52;
 
-  /* ── Motion ── */
-  --ease:      cubic-bezier(.4,0,.2,1);
-  --ease-out:  cubic-bezier(0,0,.2,1);
-  --ease-back: cubic-bezier(.34,1.56,.64,1);
+  --gold:       #B07D1A;
+  --gold-dim:   rgba(176,125,26,.12);
+  --green:      #1A7A4A;
+  --green-dim:  rgba(26,122,74,.1);
+  --red:        #C0392B;
+  --red-dim:    rgba(192,57,43,.1);
+  --purple:     #6B46C1;
+  --purple-dim: rgba(107,70,193,.1);
+  --blue:       #1A56A0;
+  --blue-dim:   rgba(26,86,160,.1);
+
+  --r-common:    #888888;
+  --r-uncommon:  #1A7A4A;
+  --r-rare:      #1A56A0;
+  --r-epic:      #6B46C1;
+  --r-legendary: #B07D1A;
+  --r-mythic:    #A8295A;
+
+  --radius:    10px;
+  --radius-sm: 6px;
+  --radius-xs: 4px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+
+  --ease:        cubic-bezier(.4,0,.2,1);
+  --ease-out:    cubic-bezier(0,0,.2,1);
+  --ease-back:   cubic-bezier(.34,1.56,.64,1);
   --ease-spring: cubic-bezier(.175,.885,.32,1.275);
 
-  /* ── Shadows ── */
-  --shadow-sm:   0 2px 8px rgba(0,0,0,.5);
-  --shadow:      0 8px 32px rgba(0,0,0,.6);
-  --shadow-lg:   0 16px 64px rgba(0,0,0,.7);
-  --shadow-cyan: 0 0 20px rgba(0,74,173,.35);
+  --shadow-sm:   0 1px 4px rgba(0,0,0,.08);
+  --shadow:      0 4px 16px rgba(0,0,0,.1);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,.14);
+  --shadow-cyan: 0 0 12px rgba(26,122,74,.2);
 
-  /* ── Layout ── */
-  --sidebar-w: 220px;
+  --sidebar-w: 216px;
 }
 
-/* ══ TEXT SELECTION ══
-   Selected text: cream white on navy ~40% → readable on our dark bg.
-   #004aad at 65% opacity looks right on #010d1f background.
-*/
-::selection {
-  background: rgba(0, 74, 173, 0.65);
-  color: #f9f6ee;
-  text-shadow: none;
-}
-
-::-moz-selection {
-  background: rgba(0, 74, 173, 0.65);
-  color: #f9f6ee;
-  text-shadow: none;
-}
-
-/* Input/textarea selection needs its own override */
-input::selection,
-textarea::selection {
-  background: rgba(0, 74, 173, 0.55);
-  color: #f9f6ee;
-}
-
-input::-moz-selection,
-textarea::-moz-selection {
-  background: rgba(0, 74, 173, 0.55);
-  color: #f9f6ee;
-}
-
-/* Code elements — slightly brighter accent for contrast on dark bg */
-code::selection,
-pre::selection,
-.msg-key::selection {
-  background: rgba(0, 86, 204, 0.7);
-  color: #ffffff;
-}
+::selection { background: rgba(26,122,74,.18); color: #0D3D22; }
+::-moz-selection { background: rgba(26,122,74,.18); color: #0D3D22; }
+input::selection, textarea::selection { background: rgba(26,122,74,.15); }
