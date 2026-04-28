@@ -14,10 +14,6 @@ const Architect = {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             Rarities
           </button>
-          <button class="btn btn-ghost btn-sm" id="btnPreviewCrate">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            Preview
-          </button>
           <button class="btn btn-danger btn-sm" id="btnDiscardCrate">↩ Discard</button>
           <button class="btn btn-primary btn-sm" id="btnSaveCrate">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -87,14 +83,6 @@ const Architect = {
             </div>
             <div id="keyBody"></div>
           </div>
-
-          <!-- Preview Config -->
-          <div class="card card-sm" id="previewConfigCard">
-            <div class="card-header" style="margin-bottom:8px">
-              <div class="card-title"><span class="card-accent"></span>PREVIEW GUI CONFIG</div>
-            </div>
-            <div id="previewConfigBody"></div>
-          </div>
         </div>
       </div>
     `;
@@ -107,7 +95,6 @@ const Architect = {
   _bindTopActions() {
     Utils.on(Utils.qs('#btnSaveCrate'),    'click', () => this.save());
     Utils.on(Utils.qs('#btnDiscardCrate'), 'click', () => this.discard());
-    Utils.on(Utils.qs('#btnPreviewCrate'), 'click', () => PreviewModal.open(State.currentCrate));
     Utils.on(Utils.qs('#btnAddReward'),    'click', () => RewardModal.open(null, r => this.addReward(r)));
     Utils.on(Utils.qs('#btnRarityEditor'), 'click', () => RarityEditor.open());
   },
@@ -138,7 +125,6 @@ const Architect = {
     this.renderCrateSettings();
     this.renderPity();
     this.renderKeys();
-    this.renderPreviewConfig();
   },
 
   /* ── Rewards ── */
@@ -443,61 +429,6 @@ const Architect = {
       body.appendChild(addBtn);
     };
     renderList();
-  },
-
-  /* ── Preview Config ── */
-  renderPreviewConfig() {
-    const body  = Utils.qs('#previewConfigBody'); if (!body) return;
-    const crate = State.currentCrate;             if (!crate) return;
-    if (!crate.preview) crate.preview = {};
-    const p = crate.preview;
-
-    body.innerHTML = `
-      <div class="field-group">
-        <label class="field-label">GUI Title <span style="color:var(--text3)">(leave blank = auto)</span></label>
-        <input class="field-input" id="pvTitle" value="${p.title || ''}" placeholder="&0Preview &8» &b{crate}"/>
-      </div>
-      <div class="field-row" style="margin-top:8px">
-        <div class="field-group">
-          <label class="field-label">Sort Order</label>
-          <select class="field-input" id="pvSort">
-            ${['RARITY_DESC','RARITY_ASC','WEIGHT_DESC','WEIGHT_ASC','CONFIG_ORDER'].map(s =>
-              `<option value="${s}" ${p.sortOrder===s?'selected':''}>${s.replace('_',' ')}</option>`).join('')}
-          </select>
-        </div>
-        <div class="field-group">
-          <label class="field-label">Border Material</label>
-          <input class="field-input" id="pvBorder" value="${p.borderMaterial || ''}" placeholder="auto"/>
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px" id="pvToggles"></div>
-      <div class="field-group" style="margin-top:8px">
-        <label class="field-label">Chance Format</label>
-        <input class="field-input" id="pvChanceFmt" value="${p.chanceFormat || '&7Chance: &e{chance}'}" placeholder="&7Chance: &e{chance}"/>
-      </div>
-    `;
-
-    const togs = [
-      ['Show Chance %',   'showChance',    p.showChance !== false],
-      ['Show Weight',     'showWeight',    !!p.showWeight],
-      ['Show Pity',       'showPity',      p.showPity !== false],
-      ['Show Key Balance','showKeyBalance',p.showKeyBalance !== false],
-      ['Show Actual Item','showActualItem',p.showActualItem !== false],
-    ];
-    const togContainer = Utils.qs('#pvToggles');
-    togs.forEach(([label, key, val]) => {
-      togContainer.appendChild(ToggleSwitch(label, val, v => { p[key] = v; this.dirty = true; }));
-    });
-
-    ['pvTitle','pvSort','pvBorder','pvChanceFmt'].forEach(id => {
-      Utils.qs('#'+id)?.addEventListener('change', () => {
-        p.title          = Utils.qs('#pvTitle').value || null;
-        p.sortOrder      = Utils.qs('#pvSort').value;
-        p.borderMaterial = Utils.qs('#pvBorder').value || null;
-        p.chanceFormat   = Utils.qs('#pvChanceFmt').value;
-        this.dirty = true;
-      });
-    });
   },
 
   /* ── Reward CRUD ── */

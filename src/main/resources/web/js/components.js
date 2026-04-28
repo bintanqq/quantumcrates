@@ -35,59 +35,126 @@ function AddCard(onClick) {
   return div;
 }
 
+/**
+ * SliderRow — weight slider yang bisa di-drag smooth.
+ *
+ * Fix utama untuk drag issue:
+ * 1. Gunakan pointer events (onpointerdown/move/up) bukan mouse events —
+ *    ini unified untuk mouse + touch tanpa perlu dua handler terpisah.
+ * 2. setPointerCapture() memastikan elemen tetap menerima events meski
+ *    pointer keluar dari bounds (penyebab utama "click-only" behavior).
+ * 3. preventDefault() pada pointermove mencegah browser scroll/pan
+ *    menginterrupt drag.
+ * 4. touch-action: none di CSS (sudah ada di components.css) — wajib
+ *    agar browser tidak intercept touch scroll.
+ * 5. Kalkulasi value dari posisi pointer, bukan dari .value input,
+ *    biar smooth tanpa stepping artifact.
+ */
 function SliderRow(reward, totalWeight, onChange) {
   const color = Utils.rarityColor(reward.rarity);
   const div = Utils.el('div', 'slider-row');
   div.dataset.id = reward.id;
 
-  function updateSliderBg(input, val) {
-    const pct = Math.min(val / 50 * 100, 100);
-    input.style.background = `linear-gradient(to right,${color} ${pct}%,var(--bg2) ${pct}%)`;
-  }
-
+  /* ── Bangun HTML dulu ── */
   div.innerHTML = `
     <div class="slider-name">
       <span class="slider-rarity-dot" style="background:${color};box-shadow:0 0 5px ${color}60"></span>
       ${Utils.strip(reward.displayName) || reward.id}
     </div>
-    <input type="range" class="slider-range" min="0.1" max="50" step="0.5" value="${reward.weight}" style="cursor:grab;touch-action:none;"/>
+    <div class="slider-track-wrap">
+      <div class="slider-track">
+        <div class="slider-fill" style="width:0%"></div>
+        <div class="slider-thumb"></div>
+      </div>
+    </div>
     <div class="slider-controls">
       <button class="slider-btn" data-action="minus">−</button>
       <input class="slider-val" type="number" min="0.1" step="0.5" value="${reward.weight}" inputmode="decimal"/>
-      <span class="slider-pct">%</span>
       <button class="slider-btn" data-action="plus">+</button>
     </div>
   `;
 
-  const range  = div.querySelector('.slider-range');
-  const numIn  = div.querySelector('.slider-val');
+  const trackWrap = div.querySelector('.slider-track-wrap');
+  const track     = div.querySelector('.slider-track');
+  const fill      = div.querySelector('.slider-fill');
+  const thumb     = div.querySelector('.slider-thumb');
+  const numIn     = div.querySelector('.slider-val');
 
-  updateSliderBg(range, reward.weight);
+  const MIN = 0.1, MAX = 50;
 
-  const update = (val) => {
-    val = Math.max(0.1, Math.min(50, parseFloat(val) || 0.1));
+  /* ── Update visual dari value ── */
+  function renderValue(val) {
+    const clamped = Math.max(MIN, Math.min(MAX, val));
+    const pct     = ((clamped - MIN) / (MAX - MIN)) * 100;
+    fill.style.width        = pct + '%';
+    fill.style.background   = color;
+    thumb.style.left        = pct + '%';
+    thumb.style.borderColor = color;
+    thumb.style.boxShadow   = `0 0 0 3px ${color}40`;
+    numIn.value = clamped.toFixed(1);
+  }
+
+  /* ── Apply value ke reward + fire callback ── */
+  function applyValue(raw) {
+    const val = Math.max(MIN, Math.min(MAX, parseFloat(raw) || MIN));
     reward.weight = parseFloat(val.toFixed(1));
-    range.value = val;
-    numIn.value = val.toFixed(1);
-    updateSliderBg(range, val);
+    renderValue(val);
     onChange?.(reward);
-  };
+  }
 
-  // Pake 'input' bukan 'oninput' attribute supaya drag bener
-  range.addEventListener('input', () => update(range.value));
+  /* ── Initial render ── */
+  renderValue(reward.weight);
 
-  // Prevent parent scroll/drag intercept saat drag slider
-  range.addEventListener('mousedown', (e) => e.stopPropagation());
-  range.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+  /* ──────────────────────────────────────────────────────────────
+     POINTER-BASED DRAG (works for mouse AND touch)
+     Key: setPointerCapture → events continue even outside element
+     ────────────────────────────────────────────────────────────── */
+  let dragging = false;
 
-  numIn.addEventListener('change', () => update(numIn.value));
-  // Update live saat ngetik juga
-  numIn.addEventListener('input', () => {
-    if (numIn.value !== '' && !isNaN(numIn.value)) update(numIn.value);
+  function valueFromPointerX(clientX) {
+    const rect  = track.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return MIN + ratio * (MAX - MIN);
+  }
+
+  track.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    dragging = true;
+    track.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    e.stopPropagation();
+    applyValue(valueFromPointerX(e.clientX));
   });
 
-  div.querySelector('[data-action="minus"]').addEventListener('click', () => update(reward.weight - 0.5));
-  div.querySelector('[data-action="plus"]').addEventListener('click',  () => update(reward.weight + 0.5));
+  track.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    e.preventDefault();
+    e.stopPropagation();       // ← ini juga
+    applyValue(valueFromPointerX(e.clientX));
+  });
+
+  track.addEventListener('pointerup', (e) => {
+    if (!dragging) return;
+    dragging = false;
+    track.releasePointerCapture(e.pointerId);
+  });
+
+  track.addEventListener('pointercancel', (e) => {
+    dragging = false;
+    track.releasePointerCapture(e.pointerId);
+  });
+
+  /* ── Number input ── */
+  numIn.addEventListener('change', () => applyValue(numIn.value));
+  numIn.addEventListener('input', () => {
+    if (numIn.value !== '' && !isNaN(numIn.value)) {
+      renderValue(parseFloat(numIn.value)); // live visual only — apply on change
+    }
+  });
+
+  /* ── +/- buttons ── */
+  div.querySelector('[data-action="minus"]').addEventListener('click', () => applyValue(reward.weight - 0.5));
+  div.querySelector('[data-action="plus"]').addEventListener('click',  () => applyValue(reward.weight + 0.5));
 
   return div;
 }

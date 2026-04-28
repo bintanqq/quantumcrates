@@ -128,18 +128,138 @@ tr:hover td{background:var(--surface)}
 .add-card svg{transition:transform .2s}
 .add-card:hover svg{transform:scale(1.15)}
 
-/* ══ WEIGHT SLIDER ROW ══ */
-.slider-row{display:flex;align-items:center;gap:10px;padding:5px 0}
-.slider-name{width:110px;font-size:11.5px;font-weight:500;color:var(--text2);flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:5px}
-.slider-rarity-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.slider-range{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:var(--bg2);outline:none;cursor:pointer}
-.slider-range::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--cyan);border:2px solid var(--bg);box-shadow:var(--shadow-cyan);cursor:pointer;transition:transform .15s}
-.slider-range::-webkit-slider-thumb:hover{transform:scale(1.25)}
-.slider-controls{display:flex;align-items:center;gap:3px;flex-shrink:0}
-.slider-btn{width:20px;height:20px;border-radius:4px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:14px;line-height:1}
-.slider-btn:hover{background:var(--surface2);color:var(--cyan);border-color:var(--border2)}
-.slider-val{width:38px;text-align:center;font-size:12px;font-weight:700;color:var(--text);border:1px solid var(--border);border-radius:4px;background:var(--bg3);padding:2px 4px}
-.slider-pct{font-size:10px;color:var(--text3);width:10px}
+/* ══ SLIDER PATCH — replace old input[type=range] approach ══
+/* Remove old native range styles — override to hidden if still referenced */
+.slider-range {
+  display: none !important;
+}
+
+/* ══ WEIGHT SLIDER ROW — updated layout ══ */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+}
+
+.slider-name {
+  width: 110px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text2);
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.slider-rarity-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* .slider-track-wrap / .slider-track / .slider-fill / .slider-thumb
+   are defined in animations.css since they have transition properties */
+
+.slider-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.slider-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.slider-btn:hover {
+  background: var(--surface2);
+  color: var(--cyan);
+  border-color: var(--border2);
+}
+.slider-btn:active {
+  transform: scale(0.9);
+}
+
+.slider-val {
+  width: 44px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg3);
+  padding: 3px 4px;
+  transition: border-color .15s;
+}
+.slider-val:focus {
+  outline: none;
+  border-color: var(--cyan2);
+}
+
+.slider-track-wrap {
+  flex: 1;
+  padding: 6px 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;        /* ← ini wajib */
+}
+
+.slider-track {
+  position: relative;
+  height: 4px;
+  background: var(--bg2);
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.slider-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: 2px;
+  pointer-events: none;      /* ← jangan block event ke track */
+}
+
+.slider-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text);
+  pointer-events: none;      /* ← sama, jangan block */
+  left: 0%;
+}
+
+/* Remove number spinners */
+.slider-val::-webkit-inner-spin-button,
+.slider-val::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.slider-val { -moz-appearance: textfield; appearance: textfield; }
 
 /* ══ TOAST ══ */
 .toast-container{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
@@ -178,22 +298,3 @@ tr:hover td{background:var(--surface)}
 .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;color:var(--text3);text-align:center;gap:10px}
 .empty-state svg{opacity:.3}
 .empty-state p{font-size:12px;max-width:220px;line-height:1.6}
-
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-input[type="number"] {
-    -moz-appearance: textfield;
-    appearance: textfield;
-}
-
-.slider-range {
-    cursor: grab;
-    touch-action: none;
-    pointer-events: all;
-}
-.slider-range:active {
-    cursor: grabbing;
-}

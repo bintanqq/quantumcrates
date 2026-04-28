@@ -1,8 +1,327 @@
-@keyframes spin{to{transform:rotate(360deg)}}
-.spin{animation:spin .8s linear infinite}
-@keyframes fade-in{from{opacity:0}to{opacity:1}}
-@keyframes slide-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-.animate-in{animation:slide-up .3s var(--ease-back)}
-@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-.skeleton{background:linear-gradient(90deg,var(--bg3) 25%,var(--surface) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;color:transparent !important}
-.skeleton *{visibility:hidden}
+/* ══════════════════════════════════════════════
+   ANIMATIONS.CSS — QuantumCrates Dashboard
+   Page transitions, micro-interactions, entrance
+   ══════════════════════════════════════════════ */
+
+/* ── Base keyframes ────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg) } }
+.spin { animation: spin .8s linear infinite }
+
+@keyframes fade-in {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(14px) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-10px) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+
+@keyframes slide-right {
+  from { opacity: 0; transform: translateX(-12px) }
+  to   { opacity: 1; transform: translateX(0) }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.94) }
+  to   { opacity: 1; transform: scale(1) }
+}
+
+.animate-in   { animation: slide-up .3s var(--ease-back) both }
+.animate-fade { animation: fade-in .2s var(--ease) both }
+
+/* ── Skeleton shimmer ──────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0 }
+  100% { background-position:  200% 0 }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--bg3) 25%, var(--surface) 50%, var(--bg3) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+  color: transparent !important;
+}
+.skeleton * { visibility: hidden }
+
+/* ══════════════════════════════════════════════
+   PAGE TRANSITIONS
+   Pages fade+slide on navigate()
+   ══════════════════════════════════════════════ */
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(1px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes page-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.page.active {
+  animation: page-enter .32s var(--ease-out) both;
+}
+
+/* ══════════════════════════════════════════════
+   CARD ENTRANCE — staggered reveal
+   Apply .stagger-children to parent; children
+   animate in with increasing delay.
+   ══════════════════════════════════════════════ */
+
+.stagger-children > * {
+  animation: slide-up .35s var(--ease-back) both;
+}
+.stagger-children > *:nth-child(1)  { animation-delay: .04s }
+.stagger-children > *:nth-child(2)  { animation-delay: .08s }
+.stagger-children > *:nth-child(3)  { animation-delay: .12s }
+.stagger-children > *:nth-child(4)  { animation-delay: .16s }
+.stagger-children > *:nth-child(5)  { animation-delay: .20s }
+.stagger-children > *:nth-child(6)  { animation-delay: .24s }
+.stagger-children > *:nth-child(7)  { animation-delay: .28s }
+.stagger-children > *:nth-child(8)  { animation-delay: .32s }
+
+/* ══════════════════════════════════════════════
+   CARD HOVER — subtle lift
+   ══════════════════════════════════════════════ */
+
+.card {
+  transition: border-color .2s var(--ease), box-shadow .2s var(--ease), transform .2s var(--ease);
+}
+.card:hover {
+  border-color: var(--border2);
+  box-shadow: 0 4px 20px rgba(0,0,0,.4);
+  transform: translateY(-1px);
+}
+
+/* Cards that shouldn't lift (e.g. full-height layout cards) */
+.card.no-hover:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* ══════════════════════════════════════════════
+   NAV ITEM — active indicator sweep
+   ══════════════════════════════════════════════ */
+
+@keyframes nav-sweep {
+  from { opacity: 0; transform: scaleY(0) }
+  to   { opacity: 1; transform: scaleY(1) }
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--cyan);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px var(--cyan);
+  animation: nav-sweep .2s var(--ease-back) both;
+}
+
+/* ══════════════════════════════════════════════
+   REWARD CARD — pop-in when added to grid
+   ══════════════════════════════════════════════ */
+
+@keyframes reward-pop {
+  from { opacity: 0; transform: scale(0.8) rotate(-2deg) }
+  to   { opacity: 1; transform: scale(1) rotate(0deg) }
+}
+.reward-card {
+  animation: reward-pop .25s var(--ease-spring) both;
+}
+
+/* ══════════════════════════════════════════════
+   LOG ITEM — slide in from right (live feed)
+   ══════════════════════════════════════════════ */
+
+@keyframes log-slide {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.log-item {
+  animation: log-slide .28s var(--ease-out) both;
+}
+
+/* ══════════════════════════════════════════════
+   TOPBAR STATS — number flip on update
+   ══════════════════════════════════════════════ */
+
+@keyframes num-tick {
+  0%  { transform: translateY(-4px); opacity: 0 }
+  100%{ transform: translateY(0);    opacity: 1 }
+}
+.tstat-val.updating {
+  animation: num-tick .2s var(--ease-out) both;
+}
+
+/* ══════════════════════════════════════════════
+   SLIDER — custom track/thumb styles
+   replaces native <input type="range">
+   ══════════════════════════════════════════════ */
+
+.slider-track-wrap {
+  flex: 1;
+  padding: 6px 0; /* expand click area */
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;           /* CRITICAL: prevents mobile scroll intercept */
+}
+
+.slider-track {
+  position: relative;
+  height: 4px;
+  background: var(--bg2);
+  border-radius: 2px;
+  border: 1px solid var(--border);
+}
+
+.slider-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--cyan);
+  pointer-events: none;
+  transition: width .05s linear; /* tiny transition so it doesn't stutter */
+}
+
+.slider-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2.5px solid var(--cyan);
+  box-shadow: 0 0 0 3px rgba(0,74,173,.3), var(--shadow-sm);
+  pointer-events: none;
+  transition: transform .12s var(--ease-spring), box-shadow .12s;
+  left: 0%; /* updated via JS */
+}
+
+.slider-track:active .slider-thumb,
+.slider-track-wrap:active .slider-thumb {
+  transform: translate(-50%, -50%) scale(1.3);
+}
+
+/* ══════════════════════════════════════════════
+   BUTTON MICRO-INTERACTIONS
+   ══════════════════════════════════════════════ */
+
+.btn {
+  transition: all .18s var(--ease), transform .12s var(--ease-spring);
+}
+.btn:active {
+  transform: scale(0.96) translateY(1px) !important;
+}
+
+/* ══════════════════════════════════════════════
+   SIDEBAR COLLAPSE TRANSITION
+   ══════════════════════════════════════════════ */
+
+.sidebar {
+  transition: width .3s var(--ease), min-width .3s var(--ease);
+}
+
+/* ══════════════════════════════════════════════
+   MODAL — spring entrance
+   ══════════════════════════════════════════════ */
+
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(.92) translateY(18px) }
+  to   { opacity: 1; transform: scale(1)  translateY(0) }
+}
+@keyframes modal-overlay-in {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}
+.modal-overlay.open {
+  animation: modal-overlay-in .2s var(--ease) both;
+}
+.modal.animate-in {
+  animation: modal-in .32s var(--ease-spring) both;
+}
+
+/* ══════════════════════════════════════════════
+   TOAST — spring bounce
+   ══════════════════════════════════════════════ */
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(.92) }
+  to   { opacity: 1; transform: translateY(0) scale(1) }
+}
+@keyframes toast-out {
+  to { opacity: 0; transform: translateY(10px) scale(.93) }
+}
+
+/* ══════════════════════════════════════════════
+   LIVE DOT — heartbeat pulse
+   ══════════════════════════════════════════════ */
+
+@keyframes pulse-live {
+  0%, 100% { transform: scale(1);   opacity: 1   }
+  50%       { transform: scale(1.5); opacity: .45 }
+}
+.live-dot {
+  animation: pulse-live 1.4s ease-in-out infinite;
+}
+
+/* ══════════════════════════════════════════════
+   SIDEBAR STATUS DOT — breathe when online
+   ══════════════════════════════════════════════ */
+
+@keyframes breathe-online {
+  0%, 100% { box-shadow: 0 0 4px var(--green) }
+  50%       { box-shadow: 0 0 10px var(--green), 0 0 3px var(--green) }
+}
+.server-status-dot.online {
+  animation: breathe-online 2.5s ease-in-out infinite;
+}
+
+/* ══════════════════════════════════════════════
+   BADGE PULSE (nav badge)
+   ══════════════════════════════════════════════ */
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1 }
+  50%       { opacity: .55 }
+}
+
+/* ══════════════════════════════════════════════
+   FOCUS RING — accessible, on-theme
+   ══════════════════════════════════════════════ */
+
+:focus-visible {
+  outline: 2px solid var(--cyan2);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none; /* already handled by field-input:focus */
+}
