@@ -216,7 +216,7 @@ const KeySettings = {
       badge.style.color       = this._currentMode === 'virtual' ? 'var(--cyan)'      : 'var(--gold)';
       badge.style.borderColor = this._currentMode === 'virtual' ? 'rgba(26,122,74,.25)' : 'rgba(176,125,26,.25)';
     }
-    toast('Key mode staged for Save All ✓', 'info', 1800);
+    toast('Key mode staged — click Save All to apply', 'info', 1800);
   },
 
   async savePhysical() {
@@ -225,7 +225,7 @@ const KeySettings = {
     const lore = (Utils.qs('#physLore')?.value || '').split('\n').map(s => s.trim()).filter(Boolean);
     State.markDirty('keyConfig', { physical: { material: mat, customModelData: cmd, extraLore: lore } });
     this._physicalCfg = { material: mat, customModelData: cmd, extraLore: lore };
-    toast('Physical key config staged for Save All ✓', 'info', 1800);
+    toast('Physical config staged — click Save All to apply', 'info', 1800);
   },
 
   clearPlayerStatus() { const el = Utils.qs('#givePlayerStatus'); if (el) el.style.display = 'none'; },

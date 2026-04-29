@@ -92,6 +92,7 @@ async function launchApp() {
   await refreshStatus();
   navigate('architect');
   updateSidebarVersion();
+  State._notifySaveButton();
   if (State.demoMode) toast('Demo Mode — changes not saved.', 'info', 5000);
 }
 
@@ -210,25 +211,14 @@ async function saveAll() {
   } catch (e) {
     toast('Save failed: ' + e.message, 'error', 5000);
   } finally {
-    btn.innerHTML = `
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none"
         stroke="currentColor" stroke-width="2.5">
         <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
         <polyline points="17 21 17 13 7 13 7 21"/>
         <polyline points="7 3 7 8 15 8"/>
-      </svg>
-      Save All
-      <span id="saveAllBadge" style="
-        position:absolute;top:-6px;right:-6px;
-        background:var(--red);color:#fff;
-        font-size:9px;font-weight:800;
-        width:16px;height:16px;border-radius:50%;
-        display:flex;align-items:center;justify-content:center;
-        pointer-events:none;
-      "></span>
-    `;
-    State._notifySaveButton();
-  }
+      </svg> Save All`;
+      State._notifySaveButton();
+    }
 }
 
 /* ── Modal helpers (global) ── */

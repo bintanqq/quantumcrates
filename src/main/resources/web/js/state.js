@@ -61,11 +61,11 @@ const State = {
 
   _notifySaveButton() {
     const btn   = document.getElementById('btnSaveAll');
-    const badge = document.getElementById('saveAllBadge');
     if (!btn) return;
     const count = this.pendingCount();
     btn.disabled = count === 0;
     btn.style.opacity = count === 0 ? '0.45' : '1';
+    const badge = document.getElementById('saveAllBadge');
     if (badge) badge.textContent = count > 0 ? count : '';
   },
 

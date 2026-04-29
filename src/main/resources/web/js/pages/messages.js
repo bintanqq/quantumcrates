@@ -246,7 +246,7 @@ const Messages = {
   async save() {
     State.markDirty('messages', { chat: this.chatData, gui: this.guiData });
     this.dirty = false;
-    toast('Messages staged for Save All ✓', 'info', 1800);
+    toast('Messages staged — click Save All to apply', 'info', 1800);
   },
 
   reset() {

@@ -318,7 +318,7 @@ const Architect = {
     State.setCrate(crate);
     State.markDirty('crate', { id: crate.id });
     this.dirty = false;
-    toast('Staged for Save All ✓', 'info', 1800);
+    toast('Crate staged — click Save All to apply', 'info', 1800);
   },
 
   discard() {
