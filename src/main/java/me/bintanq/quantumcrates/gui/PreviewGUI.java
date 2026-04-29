@@ -15,12 +15,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
 
-/**
- * PreviewGUI — inventory GUI that displays all crate rewards.
- *
- * All rarity-dependent logic (colors, border materials, ordering)
- * delegates to RarityManager — zero hardcoded tier names.
- */
 public class PreviewGUI {
 
     public static final String TITLE_PREFIX = "\u00A70\u00A7lPreview \u00A78\u00BB ";
@@ -78,7 +72,6 @@ public class PreviewGUI {
 
         Inventory inv = Bukkit.createInventory(null, 54, title);
 
-        // Border: RarityManager resolves the material
         Material borderMat = resolveBorderMaterial(cfg, crate);
         fillBorder(inv, borderMat);
 
@@ -245,9 +238,10 @@ public class PreviewGUI {
         }
 
         if (cfg.isShowPity() && crate.getPity().isEnabled()) {
-            int pity = plugin.getPlayerDataManager().getPity(player.getUniqueId(), crate.getId());
-            int max  = crate.getPity().getThreshold();
-            int soft = crate.getPity().getSoftPityStart();
+            int pity    = plugin.getPlayerDataManager().getPity(player.getUniqueId(), crate.getId());
+            int max     = crate.getPity().getThreshold();
+            int soft    = crate.getPity().getSoftPityStart();
+            int remaining = max - pity;
 
             String pityHeader = MessageManager.getGui("info-pity-header");
             if (!pityHeader.isEmpty()) lore.add(pityHeader);
@@ -258,12 +252,17 @@ public class PreviewGUI {
             else                   statusKey = "info-pity-status-normal";
 
             String status = MessageManager.getGui(statusKey);
-            lore.add(MessageManager.getGui("info-pity-label",
-                    "{pity}", String.valueOf(pity),
-                    "{pity_max}", String.valueOf(max))
-                    + "  " + status);
 
+            lore.add(MessageManager.getGui("info-pity-progress",
+                    "{pity}", String.valueOf(pity),
+                    "{pity_max}", String.valueOf(max),
+                    "{soft}", String.valueOf(soft)));
             lore.add("  " + buildPityBar(pity, max, soft));
+            if (pity < max) {
+                lore.add(MessageManager.getGui("info-pity-remaining",
+                        "{remaining}", String.valueOf(remaining)));
+            }
+            lore.add(status);
         }
 
         String controlsDivider = MessageManager.getGui("info-controls-divider");

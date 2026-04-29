@@ -30,13 +30,10 @@ permissions:
       quantumcrates.use: true
       quantumcrates.web: true
   quantumcrates.use:
-    description: Bisa menggunakan crate
-    default: true
-  quantumcrates.preview:
-    description: Preview reward crate
+    description: Can use crate
     default: true
   quantumcrates.key.give:
-    description: Kasih key ke player lain
+    description: Give key to other
     default: op
   quantumcrates.massopen:
     description: Mass open crate

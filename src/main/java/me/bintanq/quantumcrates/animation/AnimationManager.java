@@ -54,7 +54,7 @@ public class AnimationManager {
         return switch (crate.getGuiAnimation()) {
             case SHUFFLER    -> new ShufflerAnimation(plugin);
             case BOUNDARY    -> new BoundaryAnimation(plugin);
-            case TRIPLE_SPIN -> new TripleSpinAnimation(plugin);
+            case SINGLE_SPIN -> new SingleSpinAnimation(plugin);  // renamed
             case FLICKER     -> new FlickerAnimation(plugin);
             default          -> new RouletteAnimation(plugin);
         };

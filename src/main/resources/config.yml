@@ -86,7 +86,7 @@ messages:
   players-only-open: "&cCrates can only be opened by players, not console."
 
   # ── Crate Opening ──
-  crate-not-open:    "&cCrate &e{crate} &cis not available right now. Available: &e{schedule}"
+  crate-not-open:    "&cCrate &e{crate} &cis not available right now. Opens: &e{schedule}"
   cooldown-active:   "&cWait &e{time} &cbefore opening this crate again."
   already-opening:   "&cYou are already opening a crate!"
   reward-received:   "&aCongratulations! You received: &e{reward}"
@@ -101,12 +101,13 @@ messages:
   mass-open-success: "&aSuccessfully opened &e{count}&a crates at once!"
 
   # ── Pity ──
-  pity-progress:     "&7Pity: &e{current}&7/&e{max} &8(+{bonus}% bonus chance)"
-  pity-guaranteed:   "&6✦ &ePity triggered! Rare reward guaranteed."
+  pity-status-hard: "&c&l[GUARANTEED RARE NEXT OPEN!]"
+  pity-status-soft: "&e[+Bonus Chance Active]"
+  pity-status-normal: "&7[Normal]"
 
   # ── Admin Commands ──
-  pity-info:         "&7Pity of &e{player} &7on &e{crate}&7: &a{current}&7/&a{max}"
-  pity-reset-done:   "&aPity of &e{player} &aon &e{crate} &ahas been reset."
+  pity-info: "&7Pity of &e{player} &7on &e{crate}&7: &a{current}&7/&a{max} &8(soft at {soft}) {status}"
+  pity-reset-done: "&aPity of &e{player} &aon crate &e{crate} &ahas been reset."
   setloc-success:    "&aCrate &e{crate} &alocation set to &e{x}&7, &e{y}&7, &e{z} &8[{world}]"
   setloc-no-target:  "&cLook at a block within 5 blocks range."
 
@@ -163,15 +164,13 @@ messages:
   usage-delloc: "&cUsage: /qc delloc <crateId>"
   delloc-success: "&aCrate &e{crate} &alocation removed."
   delloc-no-location: "&eCrate &e{crate} &ehas no location set."
-  help-delloc: "&e/qc delloc <crateId> &7- Remove crate location"
 
   # ── Help command ──
   help-header:           "&a&l━━━ QuantumCrates Help ━━━"
   help-reload:           "&e/qc reload &7- Reload all crates"
   help-give:             "&e/qc give <player> <key> <amount> &7- Give key to player"
   help-open:             "&e/qc open <crateId> &7- Force open crate (admin)"
-  help-massopen:         "&e/qc massopen <crateId> [amount] &7- Mass open"
-  help-preview:          "&e/qc preview <crateId> &7- View reward preview"
+  help-delloc: "&e/qc delloc <crateId> &7- Remove crate location"
   help-info:             "&e/qc info <crateId> &7- Crate detail info"
   help-list:             "&e/qc list &7- List all crates"
   help-setloc:           "&e/qc setloc <crateId> &7- Set crate location to target block"
@@ -221,6 +220,8 @@ gui-messages:
   info-pity-status-hard: "&c&lGUARANTEED RARE!"
   info-pity-status-soft: "&e+Bonus Chance"
   info-pity-status-normal: "&7Normal"
+  info-pity-progress: "&7Pity: &e{pity}&8/&e{pity_max} &8(soft: &6{soft}&8)"
+  info-pity-remaining: "&7Next guaranteed rare in &e{remaining} &7opens"
   info-controls-divider: "&8──────────────────"
   info-controls-left:    "&7&oLeft Click  &8— &7&oPreview rewards"
   info-controls-right:   "&7&oRight Click &8— &7&oOpen crate"

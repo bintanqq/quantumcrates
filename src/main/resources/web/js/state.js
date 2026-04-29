@@ -28,10 +28,14 @@ const State = {
   markDirty(section, data) {
     switch (section) {
       case 'crate': {
-        if (!this.pendingChanges.crates) this.pendingChanges.crates = {};
-        const { id, deleted } = data;
-        this.pendingChanges.crates[id] = deleted ? null : this.crates[id];
-        break;
+          if (!this.pendingChanges.crates) this.pendingChanges.crates = {};
+          const { id, deleted } = data;
+          if (deleted) {
+              this.pendingChanges.crates[id] = null;
+          } else {
+              this.pendingChanges.crates[id] = JSON.parse(JSON.stringify(this.crates[id]));
+          }
+          break;
       }
       case 'rarities':
         this.pendingChanges.rarities = data;
@@ -86,12 +90,6 @@ const State = {
     }
   },
 
-  /* ── Rarity helpers (pengganti hardcode di utils.js) ── */
-
-  /**
-   * Ingest rarity list dari API, sort by order, inject CSS vars.
-   * Dipanggil sekali di launchApp dan setiap RARITIES_UPDATE WS event.
-   */
   setRarities(list) {
     this.rarities = [...list].sort((a, b) => a.order - b.order);
     this._injectCssVars();

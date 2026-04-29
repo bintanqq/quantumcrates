@@ -118,7 +118,7 @@ public class Crate {
     }
 
     public enum GuiAnimationType {
-        ROULETTE, SHUFFLER, BOUNDARY, TRIPLE_SPIN, FLICKER
+        ROULETTE, SHUFFLER, BOUNDARY, SINGLE_SPIN, FLICKER
     }
 
     public enum KeyType {

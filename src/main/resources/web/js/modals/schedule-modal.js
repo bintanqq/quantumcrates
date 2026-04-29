@@ -260,11 +260,14 @@ const ScheduleModal = {
   },
 
   clearSchedule() {
-    if (!confirm('Remove schedule? Crate will be always open.')) return;
-    this._crate.schedule = null;
-    this._onSave?.();
-    Modal.close();
-    toast('Schedule removed — crate is now always open.', 'info');
+      if (!confirm('Remove schedule? Crate will be always open.')) return;
+      this._crate.schedule = null;
+      State.setCrate(this._crate);
+      State.markDirty('crate', { id: this._crate.id });
+      Architect.dirty = true;
+      this._onSave?.();
+      Modal.close();
+      toast('Schedule removed — crate is now always open.', 'info');
   },
 
   save() {
@@ -273,10 +276,12 @@ const ScheduleModal = {
 
     if (mode === 'ALWAYS') {
       this._crate.schedule = null;
+      State.setCrate(this._crate);
+      State.markDirty('crate', { id: this._crate.id });
+      Architect.dirty = true;
       this._onSave?.();
       Modal.close();
       toast('Schedule saved — crate is always open.', 'success');
-      return;
     }
 
     const sch = { mode, timezone: tz };
@@ -314,6 +319,9 @@ const ScheduleModal = {
     }
 
     this._crate.schedule = sch;
+    State.setCrate(this._crate);
+    State.markDirty('crate', { id: this._crate.id });
+    Architect.dirty = true;
     this._onSave?.();
     Modal.close();
     toast('Schedule saved ✓', 'success');

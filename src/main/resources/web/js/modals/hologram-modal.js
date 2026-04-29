@@ -219,17 +219,14 @@ const HologramModal = {
   },
 
   save() {
-    const crate = State.currentCrate;
-    // Filter baris kosong di akhir
-    crate.hologramLines = crate.hologramLines.filter((l, i) =>
-      l.trim() !== '' || i < crate.hologramLines.length - 1
-    );
-    Architect.dirty = true;
-    Modal.close();
-    toast('Hologram updated! Jangan lupa Save Crate.', 'success');
-    // Refresh hologram di server kalau ada
-    if (plugin?.getHologramManager) {
-      plugin.getHologramManager().updateHologram(crate);
-    }
+      const crate = State.currentCrate;
+      crate.hologramLines = crate.hologramLines.filter((l, i) =>
+          l.trim() !== '' || i < crate.hologramLines.length - 1
+      );
+      State.setCrate(crate);
+      State.markDirty('crate', { id: crate.id });
+      Architect.dirty = true;
+      Modal.close();
+      toast('Hologram updated — click Save All to apply', 'success');
   },
 };

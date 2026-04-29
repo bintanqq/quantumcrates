@@ -35,8 +35,6 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
             case "reload"    -> cmdReload(sender);
             case "give"      -> cmdGive(sender, args);
             case "open"      -> cmdOpen(sender, args);
-            case "massopen"  -> cmdMassOpen(sender, args);
-            case "preview"   -> cmdPreview(sender, args);
             case "info"      -> cmdInfo(sender, args);
             case "list"      -> cmdList(sender);
             case "setloc"    -> cmdSetLoc(sender, args);
@@ -85,23 +83,6 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
         if (!player.hasPermission("quantumcrates.admin")) { MessageManager.sendNoPermission(sender); return; }
         if (args.length < 2) { MessageManager.send(sender, "usage-open"); return; }
         crateManager().openCrate(player, args[1]);
-    }
-
-    private void cmdMassOpen(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) { MessageManager.sendPlayerOnly(sender); return; }
-        if (!player.hasPermission("quantumcrates.massopen")) { MessageManager.sendNoPermission(sender); return; }
-        if (args.length < 2) { MessageManager.send(sender, "usage-massopen"); return; }
-        int count = args.length >= 3 ? parseIntSafe(args[2], -1) : -1;
-        crateManager().massOpen(player, args[1], count);
-    }
-
-    private void cmdPreview(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) { MessageManager.sendPlayerOnly(sender); return; }
-        if (!player.hasPermission("quantumcrates.preview")) { MessageManager.sendNoPermission(sender); return; }
-        if (args.length < 2) { MessageManager.send(sender, "usage-preview"); return; }
-        Crate crate = crateManager().getCrate(args[1]);
-        if (crate == null) { MessageManager.sendCrateNotFound(sender, args[1]); return; }
-        new me.bintanq.quantumcrates.gui.PreviewGUI(plugin, plugin.getRewardProcessor()).open(player, crate);
     }
 
     private void cmdInfo(CommandSender sender, String[] args) {
@@ -218,12 +199,25 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
 
         String crateId = args[2];
         Crate crate = crateManager().getCrate(crateId);
+        if (crate == null) { MessageManager.sendCrateNotFound(sender, crateId); return; }
+
         int pity = plugin.getPlayerDataManager().getPity(target.getUniqueId(), crateId);
-        int max  = crate != null ? crate.getPity().getThreshold() : 0;
+        int max  = crate.getPity().getThreshold();
+        int soft = crate.getPity().getSoftPityStart();
+        boolean softActive = pity >= soft;
+        boolean hardActive = pity >= max;
 
         MessageManager.send(sender, "pity-info",
-                "{player}", target.getName(), "{crate}", crateId,
-                "{current}", String.valueOf(pity), "{max}", String.valueOf(max));
+                "{player}", target.getName(),
+                "{crate}", crateId,
+                "{current}", String.valueOf(pity),
+                "{max}", String.valueOf(max),
+                "{soft}", String.valueOf(soft),
+                "{status}", hardActive
+                        ? MessageManager.getRaw("pity-status-hard")
+                        : softActive
+                        ? MessageManager.getRaw("pity-status-soft")
+                        : MessageManager.getRaw("pity-status-normal"));
     }
 
     private void cmdResetPity(CommandSender sender, String[] args) {
@@ -233,8 +227,11 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
         Player target = Bukkit.getPlayer(args[1]);
         if (target == null) { MessageManager.sendPlayerNotFound(sender, args[1]); return; }
 
-        plugin.getPlayerDataManager().resetPity(target.getUniqueId(), args[2]);
-        MessageManager.send(sender, "pity-reset-done", "{player}", target.getName(), "{crate}", args[2]);
+        String crateId = args[2];
+        if (crateManager().getCrate(crateId) == null) { MessageManager.sendCrateNotFound(sender, crateId); return; }
+
+        plugin.getPlayerDataManager().resetPity(target.getUniqueId(), crateId);
+        MessageManager.send(sender, "pity-reset-done", "{player}", target.getName(), "{crate}", crateId);
     }
 
     private void cmdCheckKeys(CommandSender sender, String[] args) {
@@ -251,9 +248,9 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
 
     private void sendHelp(CommandSender sender) {
         MessageManager.send(sender, "help-header");
-        for (String key : List.of("reload","give","open","massopen","preview","info","list",
-                "setloc","pity","resetpity","keys-cmd","web","controls-header",
-                "ctrl-left","ctrl-right","ctrl-shift")) {
+        for (String key : List.of("reload","give","open","info","list",
+                "setloc","delloc","pity","resetpity","keys-cmd","web",
+                "controls-header","ctrl-left","ctrl-right","ctrl-shift")) {
             MessageManager.send(sender, "help-" + key);
         }
     }
@@ -262,15 +259,17 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command cmd,
                                       @NotNull String label, @NotNull String[] args) {
         if (args.length == 1)
-            return filter(List.of("reload","give","open","massopen","preview",
-                    "info","list","setloc","pity","resetpity","keys","web"), args[0]);
+            return filter(List.of("reload","give","open","info","list",
+                    "setloc","delloc","pity","resetpity","keys","web"), args[0]);
 
         return switch (args[0].toLowerCase()) {
-            case "open","massopen","preview","info","setloc", "delloc" ->
+            case "open","info","setloc","delloc" ->
                     args.length == 2 ? filter(crateIds(), args[1]) : List.of();
             case "give","pity","resetpity","keys" ->
                     args.length == 2 ? filter(onlinePlayers(), args[1])
-                            : args.length == 3 ? filter(knownKeyIds(), args[2])
+                            : args.length == 3 ? filter(
+                            args[0].equalsIgnoreCase("give") ? knownKeyIds() : crateIds(),
+                            args[2])
                             : args.length == 4 && args[0].equalsIgnoreCase("give")
                             ? filter(List.of("1","5","10","32","64"), args[3])
                             : List.of();

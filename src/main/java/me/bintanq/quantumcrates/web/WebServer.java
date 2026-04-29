@@ -207,18 +207,24 @@ public class WebServer {
 
         app.post("/api/crates/{id}", ctx -> {
             try {
-                Crate crate = GsonProvider.getGson().fromJson(ctx.body(), Crate.class);
-                if (crate.getId() == null) crate.setId(ctx.pathParam("id"));
+                String id = ctx.pathParam("id");
+                Crate incoming = GsonProvider.getGson().fromJson(ctx.body(), Crate.class);
+                if (incoming.getId() == null) incoming.setId(id);
+
+                Crate existing = plugin.getCrateManager().getCrate(id);
+                if (existing != null && incoming.getLocation() == null && existing.getLocation() != null) {
+                    incoming.setLocation(existing.getLocation());
+                }
 
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    plugin.getCrateManager().saveCrate(crate);
-                    if (plugin.getHologramManager() != null) plugin.getHologramManager().spawnHologram(crate);
-                    if (plugin.getParticleManager() != null) plugin.getParticleManager().startIdleParticles(crate);
+                    plugin.getCrateManager().saveCrate(incoming);
+                    if (plugin.getHologramManager() != null) plugin.getHologramManager().spawnHologram(incoming);
+                    if (plugin.getParticleManager() != null) plugin.getParticleManager().startIdleParticles(incoming);
                     broadcast(WebSocketBridge.EventType.CRATE_UPDATE,
-                            Map.of("crateId", crate.getId()));
+                            Map.of("crateId", incoming.getId()));
                 });
 
-                ctx.json(ok("Crate saved: " + crate.getId()));
+                ctx.json(ok("Crate saved: " + incoming.getId()));
             } catch (Exception e) {
                 ctx.status(400).json(err("Invalid crate JSON: " + e.getMessage()));
             }
@@ -597,9 +603,12 @@ public class WebServer {
                         Crate incoming = GsonProvider.getGson()
                                 .fromJson(cratesObj.get(crateId), Crate.class);
                         if (incoming.getId() == null) incoming.setId(crateId);
-                        boolean isNew = plugin.getCrateManager().getCrate(crateId) == null;
-                        Bukkit.getScheduler().runTask(plugin,
-                                () -> plugin.getCrateManager().registerCrate(incoming));
+                        Crate existing2 = plugin.getCrateManager().getCrate(crateId);
+                        boolean isNew = existing2 == null;
+                        if (existing2 != null && incoming.getLocation() == null && existing2.getLocation() != null) {
+                            incoming.setLocation(existing2.getLocation());
+                        }
+                        Bukkit.getScheduler().runTask(plugin, () -> plugin.getCrateManager().registerCrate(incoming));
                         String verb = isNew ? "created" : "modified";
                         Logger.info("[SaveAll] CRATE " + verb + ": " + crateId);
                         log.add("CRATE " + verb + ": " + crateId);

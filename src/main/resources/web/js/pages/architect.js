@@ -373,9 +373,19 @@ const Architect = {
   },
 };
 
-/* ══ CRATE SETTINGS MODAL ══ */
 const CrateSettingsModal = {
+  _crate: null,
+  _onSave: null,
+
   open(crate, onSave) {
+    this._crate  = crate;
+    this._onSave = onSave;
+
+    const loc = crate.location;
+    const locStr = loc
+      ? `${loc.world} (${Math.floor(loc.x)}, ${Math.floor(loc.y)}, ${Math.floor(loc.z)})`
+      : 'Not set — use /qc setloc in-game';
+
     Modal.open(`
       <div class="modal-head">
         <div class="modal-head-left">
@@ -397,6 +407,16 @@ const CrateSettingsModal = {
             <div class="field-group"><label class="field-label">Cooldown</label><select class="field-input" id="csCooldown"><option value="0" ${!crate.cooldownMs?'selected':''}>No Cooldown</option><option value="300000" ${crate.cooldownMs===300000?'selected':''}>5 Minutes</option><option value="1800000" ${crate.cooldownMs===1800000?'selected':''}>30 Minutes</option><option value="3600000" ${crate.cooldownMs===3600000?'selected':''}>1 Hour</option><option value="86400000" ${crate.cooldownMs===86400000?'selected':''}>24 Hours</option></select></div>
             <div class="field-group"><label class="field-label">Mass Open Limit</label><input class="field-input" type="number" id="csMassLimit" value="${crate.massOpenLimit??64}" min="-1"/></div>
           </div>
+
+          <!-- Location (read-only display + clear button) -->
+          <div class="field-group">
+            <label class="field-label">Location <span style="color:var(--text3);font-weight:400">(set via /qc setloc in-game)</span></label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="field-input" style="flex:1;opacity:.75;font-family:monospace;font-size:11px;cursor:default" id="csLocDisplay">${locStr}</div>
+              ${loc ? `<button class="btn btn-danger btn-xs" onclick="CrateSettingsModal.clearLocation()">Clear</button>` : ''}
+            </div>
+          </div>
+
           <div style="display:flex;gap:10px">
             <div style="flex:1" id="csEnabledToggle"></div>
             <div style="flex:1" id="csMassToggle"></div>
@@ -406,7 +426,7 @@ const CrateSettingsModal = {
             <div class="section-label" style="margin-bottom:7px">IDLE PARTICLES</div>
             <div class="field-row" style="margin-bottom:7px">
               <div class="field-group"><label class="field-label">Type</label>
-                <select class="field-input" id="csIdleType">${['HELIX','SPIRAL','SPHERE','PULSAR','BEACON','TORNADO', 'VORTEX', 'SIMPLE', 'NONE'].map(t=>`<option value="${t}" ${(crate.idleAnimation?.type||'HELIX')===t?'selected':''}>${t}</option>`).join('')}</select>
+                <select class="field-input" id="csIdleType">${['HELIX','SPIRAL','SPHERE','BEACON','TORNADO','VORTEX','SIMPLE','NONE'].map(t=>`<option value="${t}" ${(crate.idleAnimation?.type||'HELIX')===t?'selected':''}>${t}</option>`).join('')}</select>
               </div>
               <div class="field-group"><label class="field-label">Particle</label>
                 <select class="field-input" id="csIdleParticle">${['HAPPY_VILLAGER','FLAME','ENCHANT','END_ROD','WITCH','TOTEM_OF_UNDYING','DRAGON_BREATH','SOUL_FIRE_FLAME','CRIMSON_SPORE','GLOW','SNOWFLAKE'].map(p=>`<option value="${p}" ${(crate.idleAnimation?.particle||'HAPPY_VILLAGER')===p?'selected':''}>${p}</option>`).join('')}</select>
@@ -430,7 +450,7 @@ const CrateSettingsModal = {
             <div class="section-label" style="margin-bottom:7px">GUI ANIMATION</div>
             <div class="field-group">
               <label class="field-label">Opening Animation Style</label>
-              <select class="field-input" id="csGuiAnimation">${['ROULETTE','SHUFFLER','BOUNDARY','TRIPLE_SPIN','FLICKER'].map(t=>`<option value="${t}" ${(crate.guiAnimation||'ROULETTE')===t?'selected':''}>${t.replace(/_/g,' ')}</option>`).join('')}</select>
+              <select class="field-input" id="csGuiAnimation">${['ROULETTE','SHUFFLER','BOUNDARY','SINGLE_SPIN','FLICKER'].map(t=>`<option value="${t}" ${(crate.guiAnimation||'ROULETTE')===t?'selected':''}>${t.replace(/_/g,' ')}</option>`).join('')}</select>
             </div>
           </div>
         </div>
@@ -440,30 +460,51 @@ const CrateSettingsModal = {
         <button class="btn btn-primary" onclick="CrateSettingsModal.save()">Save Settings</button>
       </div>
     `, 'modal-lg');
-    Utils.qs('#csEnabledToggle').appendChild(ToggleSwitch('Crate Enabled', crate.enabled !== false, v => { crate.enabled = v; }));
-    Utils.qs('#csMassToggle').appendChild(ToggleSwitch('Mass Open Enabled', crate.massOpenEnabled !== false, v => { crate.massOpenEnabled = v; }));
-    this._crate = crate;
-    this._onSave = onSave;
+
+    const enabledToggleEl = Utils.qs('#csEnabledToggle');
+    const massToggleEl    = Utils.qs('#csMassToggle');
+    if (enabledToggleEl) enabledToggleEl.appendChild(
+      ToggleSwitch('Crate Enabled', crate.enabled !== false, v => { this._crate.enabled = v; })
+    );
+    if (massToggleEl) massToggleEl.appendChild(
+      ToggleSwitch('Mass Open Enabled', crate.massOpenEnabled !== false, v => { this._crate.massOpenEnabled = v; })
+    );
+  },
+
+  clearLocation() {
+    this._crate.location = null;
+    CrateSettingsModal.open(this._crate, this._onSave);
+    toast('Location cleared — save to apply', 'info');
   },
 
   save() {
-    const c = this._crate;
-    c.id            = Utils.qs('#csId').value.trim();
-    c.displayName   = Utils.qs('#csName').value;
-    c.cooldownMs    = parseInt(Utils.qs('#csCooldown').value) || 0;
-    c.massOpenLimit = parseInt(Utils.qs('#csMassLimit').value) ?? -1;
-    c.idleAnimation = {
-      type:     Utils.qs('#csIdleType').value,
-      particle: Utils.qs('#csIdleParticle').value,
-    };
-    c.openAnimation = {
-      type:     Utils.qs('#csOpenType').value,
-      particle: Utils.qs('#csOpenParticle').value,
-    };
-    c.guiAnimation = Utils.qs('#csGuiAnimation').value;
-    this._onSave?.();
-    Modal.close();
-    toast('Crate settings saved', 'success');
+      const c = this._crate;
+      const idEl           = Utils.qs('#csId');
+      const nameEl         = Utils.qs('#csName');
+      const cooldownEl     = Utils.qs('#csCooldown');
+      const massLimitEl    = Utils.qs('#csMassLimit');
+      const idleTypeEl     = Utils.qs('#csIdleType');
+      const idleParticleEl = Utils.qs('#csIdleParticle');
+      const openTypeEl     = Utils.qs('#csOpenType');
+      const openParticleEl = Utils.qs('#csOpenParticle');
+      const guiAnimEl      = Utils.qs('#csGuiAnimation');
+
+      if (!idEl || !nameEl) { toast('Modal not ready', 'error'); return; }
+
+      c.id            = idEl.value.trim();
+      c.displayName   = nameEl.value;
+      c.cooldownMs    = parseInt(cooldownEl?.value) || 0;
+      c.massOpenLimit = parseInt(massLimitEl?.value) ?? -1;
+      c.idleAnimation = { type: idleTypeEl?.value || 'HELIX', particle: idleParticleEl?.value || 'HAPPY_VILLAGER' };
+      c.openAnimation = { type: openTypeEl?.value || 'RING',  particle: openParticleEl?.value || 'HAPPY_VILLAGER' };
+      c.guiAnimation  = guiAnimEl?.value || 'ROULETTE';
+
+      State.setCrate(c);
+      State.markDirty('crate', { id: c.id });
+      Architect.dirty = true;
+      this._onSave?.();
+      Modal.close();
+      toast('Crate settings saved — click Save All to apply', 'success');
   },
 };
 
@@ -507,12 +548,18 @@ const PityModal = {
     this._crate=crate; this._onSave=onSave;
   },
   save() {
-    const pity = this._crate.pity;
-    pity.threshold = parseInt(Utils.qs('#pmMax').value)||100;
-    pity.softPityStart = parseInt(Utils.qs('#pmSoft').value)||80;
-    pity.rareRarityMinimum = Utils.qs('#pmRarity').value;
-    pity.bonusChancePerOpen = parseFloat(Utils.qs('#pmBonus').value)||2;
-    this._onSave?.(); Modal.close(); toast('Pity system updated', 'success');
+      const pity = this._crate.pity;
+      pity.threshold         = parseInt(Utils.qs('#pmMax').value) || 100;
+      pity.softPityStart     = parseInt(Utils.qs('#pmSoft').value) || 80;
+      pity.rareRarityMinimum = Utils.qs('#pmRarity').value;
+      pity.bonusChancePerOpen= parseFloat(Utils.qs('#pmBonus').value) || 2;
+
+      State.setCrate(this._crate);
+      State.markDirty('crate', { id: this._crate.id });
+      Architect.dirty = true;
+      this._onSave?.();
+      Modal.close();
+      toast('Pity system updated — click Save All to apply', 'success');
   },
 };
 
@@ -561,7 +608,14 @@ const KeyReqModal = {
     });
   },
   addKey() { this._crate.requiredKeys.push({keyId:'',amount:1,type:'VIRTUAL'}); this.renderList(); },
-  save()   { this._onSave?.(); Modal.close(); toast('Key requirements updated', 'success'); },
+  save() {
+      State.setCrate(this._crate);
+      State.markDirty('crate', { id: this._crate.id });
+      Architect.dirty = true;
+      this._onSave?.();
+      Modal.close();
+      toast('Key requirements updated — click Save All to apply', 'success');
+  },
 };
 
 /* ══ RARITY EDITOR ══ */
@@ -608,17 +662,11 @@ const RarityEditor = {
   addRow(){const nextOrder=this.draft.length>0?Math.max(...this.draft.map(r=>r.order))+1:0;this.draft.push({id:'CUSTOM_'+nextOrder,displayName:'Custom',color:'&f',hexColor:'#aaaaaa',order:nextOrder,borderMaterial:'GRAY_STAINED_GLASS_PANE',icon:'⬜'});this._render();},
   removeRow(idx){if(this.draft.length<=1){toast('Must have at least one rarity!','error');return;}this.draft.splice(idx,1);this._render();},
   async save() {
-    for (const r of this.draft) {
-      if (!r.displayName?.trim()) { toast('All rarities must have a display name','error'); return; }
-      if (!r.id?.trim()) r.id = r.displayName.toUpperCase().replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'');
-      if (!r.color || !r.color.startsWith('&')) r.color = this._colorToMinecraft(r.hexColor);
-    }
-    State.setRarities(this.draft);
-    State.markDirty('rarities', this.draft);
-    Modal.close();
-    toast('Rarities staged for Save All ✓', 'info', 1800);
-    const el = document.getElementById('page-architect');
-    if (el) Architect.render(el);
+      const crate = State.currentCrate; if (!crate) return;
+      State.setCrate(crate);
+      State.markDirty('crate', { id: crate.id });
+      this.dirty = false;
+      toast('Crate staged — click Save All to apply', 'info', 1800);
   },
   async reload() {
     try {
