@@ -190,6 +190,25 @@
           <div class="tstat-sep"></div>
           <div class="tstat"><span class="tstat-val" id="tstatOpens">—</span><span class="tstat-label">Opens/day</span></div>
         </div>
+        <button id="btnSaveAll" class="btn btn-primary btn-sm"
+                disabled style="opacity:.45;position:relative;gap:7px"
+                onclick="saveAll()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5">
+            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          Save All
+          <span id="saveAllBadge" style="
+          position:absolute;top:-6px;right:-6px;
+          background:var(--red);color:#fff;
+          font-size:9px;font-weight:800;
+          width:16px;height:16px;border-radius:50%;
+          display:flex;align-items:center;justify-content:center;
+          pointer-events:none;
+        "></span>
+        </button>
       </div>
     </header>
     <div class="page-container" id="pageContainer">

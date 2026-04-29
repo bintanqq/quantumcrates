@@ -18,6 +18,57 @@ const State = {
    */
   rarities: [],
 
+  pendingChanges: {
+    crates:    null,
+    rarities:  null,
+    messages:  null,
+    keyConfig: null,
+  },
+
+  markDirty(section, data) {
+    switch (section) {
+      case 'crate': {
+        if (!this.pendingChanges.crates) this.pendingChanges.crates = {};
+        const { id, deleted } = data;
+        this.pendingChanges.crates[id] = deleted ? null : this.crates[id];
+        break;
+      }
+      case 'rarities':
+        this.pendingChanges.rarities = data;
+        break;
+      case 'messages':
+        if (!this.pendingChanges.messages)
+          this.pendingChanges.messages = { chat: {}, gui: {} };
+        if (data.chat) Object.assign(this.pendingChanges.messages.chat, data.chat);
+        if (data.gui)  Object.assign(this.pendingChanges.messages.gui,  data.gui);
+        break;
+      case 'keyConfig':
+        if (!this.pendingChanges.keyConfig) this.pendingChanges.keyConfig = {};
+        Object.assign(this.pendingChanges.keyConfig, data);
+        break;
+    }
+    this._notifySaveButton();
+  },
+
+  clearPending() {
+    this.pendingChanges = { crates: null, rarities: null, messages: null, keyConfig: null };
+    this._notifySaveButton();
+  },
+
+  pendingCount() {
+    return Object.values(this.pendingChanges).filter(v => v !== null).length;
+  },
+
+  _notifySaveButton() {
+    const btn   = document.getElementById('btnSaveAll');
+    const badge = document.getElementById('saveAllBadge');
+    if (!btn) return;
+    const count = this.pendingCount();
+    btn.disabled = count === 0;
+    btn.style.opacity = count === 0 ? '0.45' : '1';
+    if (badge) badge.textContent = count > 0 ? count : '';
+  },
+
   get currentCrate() {
     return this.currentCrateId ? this.crates[this.currentCrateId] : null;
   },

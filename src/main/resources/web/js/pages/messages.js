@@ -244,20 +244,9 @@ const Messages = {
   },
 
   async save() {
-    const btn = Utils.qs('#btnSaveMessages');
-    if (!btn) return;
-    btn.disabled = true;
-    btn.innerHTML = `<svg class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 00-9-9"/></svg> Saving...`;
-    try {
-      await API.saveMessages({ chat: this.chatData, gui: this.guiData });
-      this.dirty = false;
-      toast('Messages saved & applied to server', 'success');
-    } catch (e) {
-      toast(e.message, 'error');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = `${ICONS.diskSave} Save Messages`;
-    }
+    State.markDirty('messages', { chat: this.chatData, gui: this.guiData });
+    this.dirty = false;
+    toast('Messages staged for Save All ✓', 'info', 1800);
   },
 
   reset() {

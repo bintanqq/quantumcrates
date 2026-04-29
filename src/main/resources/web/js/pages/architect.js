@@ -273,19 +273,17 @@ const Architect = {
   },
 
   async _doDelete(id) {
-    try {
-      await API.deleteCrate(id);
-      State.deleteCrate(id);
-      Modal.close();
-      toast(`Crate "${id}" deleted.`, 'success');
-      if (State.crateOrder.length > 0) { this.loadCrate(State.crateOrder[0]); }
-      else {
-        State.currentCrateId = null;
-        this.renderCrateTabs();
-        const main = Utils.qs('#architectMain');
-        if (main) main.innerHTML = '<div class="empty-state" style="padding:60px"><p>No crates yet. Create one to get started.</p></div>';
-      }
-    } catch (e) { toast(e.message, 'error'); }
+    State.markDirty('crate', { id, deleted: true });
+    State.deleteCrate(id);
+    Modal.close();
+    toast(`Crate "${id}" staged for deletion — confirm with Save All.`, 'info');
+    if (State.crateOrder.length > 0) this.loadCrate(State.crateOrder[0]);
+    else {
+      State.currentCrateId = null;
+      this.renderCrateTabs();
+      const main = Utils.qs('#architectMain');
+      if (main) main.innerHTML = '<div class="empty-state" style="padding:60px"><p>No crates yet. Create one to get started.</p></div>';
+    }
   },
 
   addReward(reward) {
@@ -317,19 +315,10 @@ const Architect = {
 
   async save() {
     const crate = State.currentCrate; if (!crate) return;
-    const btn = Utils.qs('#btnSaveCrate');
-    btn.disabled = true;
-    btn.innerHTML = '<svg class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 00-9-9"/></svg> Saving...';
-    try {
-      await API.saveCrate(crate.id, crate);
-      State.setCrate(crate);
-      this.dirty = false;
-      toast('Crate saved', 'success');
-    } catch (e) { toast(e.message, 'error'); }
-    finally {
-      btn.disabled = false;
-      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Crate`;
-    }
+    State.setCrate(crate);
+    State.markDirty('crate', { id: crate.id });
+    this.dirty = false;
+    toast('Staged for Save All ✓', 'info', 1800);
   },
 
   discard() {
@@ -632,6 +621,29 @@ const RarityEditor = {
   update(idx,field,value){if(!this.draft[idx])return;this.draft[idx][field]=value;if(field==='displayName'){this.draft[idx].id=value.toUpperCase().replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'')||'CUSTOM';}},
   addRow(){const nextOrder=this.draft.length>0?Math.max(...this.draft.map(r=>r.order))+1:0;this.draft.push({id:'CUSTOM_'+nextOrder,displayName:'Custom',color:'&f',hexColor:'#aaaaaa',order:nextOrder,borderMaterial:'GRAY_STAINED_GLASS_PANE',icon:'⬜'});this._render();},
   removeRow(idx){if(this.draft.length<=1){toast('Must have at least one rarity!','error');return;}this.draft.splice(idx,1);this._render();},
-  async save(){for(const r of this.draft){if(!r.displayName?.trim()){toast('All rarities must have a display name','error');return;}if(!r.id?.trim())r.id=r.displayName.toUpperCase().replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'');if(!r.color||!r.color.startsWith('&'))r.color=this._colorToMinecraft(r.hexColor);}try{await API.post('/rarities',{rarities:this.draft});toast('Rarities saved','success');State.setRarities(this.draft);Modal.close();const el=document.getElementById('page-architect');if(el)Architect.render(el);}catch(e){toast(e.message,'error');}},
-  async reload(){try{await API.post('/rarities/reload');toast('Rarities reloaded','info');const data=await API.get('/rarities');State.setRarities(data.data||[]);Modal.close();const el=document.getElementById('page-architect');if(el)Architect.render(el);}catch(e){toast(e.message,'error');}},
+  async save() {
+    for (const r of this.draft) {
+      if (!r.displayName?.trim()) { toast('All rarities must have a display name','error'); return; }
+      if (!r.id?.trim()) r.id = r.displayName.toUpperCase().replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'');
+      if (!r.color || !r.color.startsWith('&')) r.color = this._colorToMinecraft(r.hexColor);
+    }
+    State.setRarities(this.draft);
+    State.markDirty('rarities', this.draft);
+    Modal.close();
+    toast('Rarities staged for Save All ✓', 'info', 1800);
+    const el = document.getElementById('page-architect');
+    if (el) Architect.render(el);
+  },
+  async reload() {
+    try {
+      const data = await API.get('/rarities');
+      State.setRarities(data.data || []);
+      State.pendingChanges.rarities = null;
+      State._notifySaveButton();
+      Modal.close();
+      toast('Rarities reloaded from server (pending rarity changes discarded)', 'info');
+      const el = document.getElementById('page-architect');
+      if (el) Architect.render(el);
+    } catch (e) { toast(e.message, 'error'); }
+  },
 };

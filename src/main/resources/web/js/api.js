@@ -58,6 +58,7 @@ const API = {
   /* ── Messages ── */
   getMessages:  ()    => API.get('/config/messages'),
   saveMessages: (msg) => API.post('/config/messages', msg),
+  saveAll: (payload) => API.post('/save-all', payload),
 };
 
 /* ══ DEMO DATA ══ */

@@ -122,6 +122,7 @@ public class WebServer {
         registerServerRoutes();
         registerMessagesRoutes();
         registerRarityRoutes();
+        registerSaveAllRoute();
         registerWebSocket();
 
         app.exception(Exception.class, (e, ctx) -> {
@@ -607,6 +608,135 @@ public class WebServer {
             } catch (Exception e) {
                 ctx.status(400).json(err(e.getMessage()));
             }
+        });
+    }
+
+    private void registerSaveAllRoute() {
+        app.post("/api/save-all", ctx -> {
+            com.google.gson.JsonObject body =
+                    GsonProvider.getGson().fromJson(ctx.body(), com.google.gson.JsonObject.class);
+
+            int saved = 0;
+            List<String> log = new ArrayList<>();
+
+            // ── Crates ──────────────────────────────────────────────
+            if (body.has("crates") && body.get("crates").isJsonObject()) {
+                com.google.gson.JsonObject cratesObj = body.getAsJsonObject("crates");
+                for (String crateId : cratesObj.keySet()) {
+                    if (cratesObj.get(crateId).isJsonNull()) {
+                        boolean existed = plugin.getCrateManager().getCrate(crateId) != null;
+                        Bukkit.getScheduler().runTask(plugin,
+                                () -> plugin.getCrateManager().removeCrate(crateId));
+                        if (existed) {
+                            Logger.info("[SaveAll] CRATE deleted: " + crateId);
+                            log.add("CRATE deleted: " + crateId);
+                            saved++;
+                        }
+                    } else {
+                        Crate incoming = GsonProvider.getGson()
+                                .fromJson(cratesObj.get(crateId), Crate.class);
+                        if (incoming.getId() == null) incoming.setId(crateId);
+                        boolean isNew = plugin.getCrateManager().getCrate(crateId) == null;
+                        Bukkit.getScheduler().runTask(plugin,
+                                () -> plugin.getCrateManager().registerCrate(incoming));
+                        String verb = isNew ? "created" : "modified";
+                        Logger.info("[SaveAll] CRATE " + verb + ": " + crateId);
+                        log.add("CRATE " + verb + ": " + crateId);
+                        saved++;
+                    }
+                }
+            }
+
+            // ── Rarities ─────────────────────────────────────────────
+            if (body.has("rarities") && body.get("rarities").isJsonArray()) {
+                java.lang.reflect.Type listType =
+                        new com.google.gson.reflect.TypeToken<List<me.bintanq.quantumcrates.model.RarityDefinition>>(){}.getType();
+                List<me.bintanq.quantumcrates.model.RarityDefinition> incoming =
+                        GsonProvider.getGson().fromJson(body.get("rarities"), listType);
+
+                List<me.bintanq.quantumcrates.model.RarityDefinition> existing =
+                        plugin.getRarityManager().getAll();
+                Set<String> existingIds = existing.stream()
+                        .map(me.bintanq.quantumcrates.model.RarityDefinition::getId)
+                        .collect(java.util.stream.Collectors.toSet());
+
+                for (me.bintanq.quantumcrates.model.RarityDefinition def : incoming) {
+                    def.setId(def.getId().toUpperCase());
+                    String verb = existingIds.contains(def.getId()) ? "modified" : "added";
+                    Logger.info("[SaveAll] RARITY " + verb + ": " + def.getId());
+                    log.add("RARITY " + verb + ": " + def.getId());
+                }
+                incoming.stream()
+                        .map(me.bintanq.quantumcrates.model.RarityDefinition::getId)
+                        .filter(id -> !incoming.stream()
+                                .map(me.bintanq.quantumcrates.model.RarityDefinition::getId)
+                                .collect(java.util.stream.Collectors.toSet()).contains(id))
+                        .forEach(id -> {
+                            Logger.info("[SaveAll] RARITY removed: " + id);
+                            log.add("RARITY removed: " + id);
+                        });
+
+                plugin.getRarityManager().saveRarities(incoming);
+                WebSocketBridge.getInstance()
+                        .broadcastRaritiesUpdate(plugin.getRarityManager().getAll());
+                saved++;
+            }
+
+            // ── Messages ─────────────────────────────────────────────
+            if (body.has("messages") && body.get("messages").isJsonObject()) {
+                com.google.gson.JsonObject msgs = body.getAsJsonObject("messages");
+                if (msgs.has("chat") && msgs.get("chat").isJsonObject())
+                    msgs.getAsJsonObject("chat").entrySet().forEach(e ->
+                            plugin.getConfig().set("messages." + e.getKey(),
+                                    e.getValue().getAsString()));
+                if (msgs.has("gui") && msgs.get("gui").isJsonObject())
+                    msgs.getAsJsonObject("gui").entrySet().forEach(e ->
+                            plugin.getConfig().set("gui-messages." + e.getKey(),
+                                    e.getValue().getAsString()));
+                plugin.saveConfig();
+                me.bintanq.quantumcrates.util.MessageManager.init(plugin);
+                Logger.info("[SaveAll] MESSAGES saved (" +
+                        (msgs.has("chat") ? msgs.getAsJsonObject("chat").size() : 0) + " chat, " +
+                        (msgs.has("gui")  ? msgs.getAsJsonObject("gui").size()  : 0) + " gui)");
+                log.add("MESSAGES config saved");
+                saved++;
+            }
+
+            // ── Key Config ───────────────────────────────────────────
+            if (body.has("keyConfig") && body.get("keyConfig").isJsonObject()) {
+                com.google.gson.JsonObject kc = body.getAsJsonObject("keyConfig");
+                if (kc.has("mode")) {
+                    String mode = kc.get("mode").getAsString().toLowerCase();
+                    plugin.getConfig().set("keys.mode", mode);
+                    Logger.info("[SaveAll] KEY mode set to: " + mode.toUpperCase());
+                    log.add("KEY mode: " + mode.toUpperCase());
+                }
+                if (kc.has("physical") && kc.get("physical").isJsonObject()) {
+                    com.google.gson.JsonObject ph = kc.getAsJsonObject("physical");
+                    if (ph.has("material"))
+                        plugin.getConfig().set("keys.physical.material",
+                                ph.get("material").getAsString().toUpperCase());
+                    if (ph.has("customModelData"))
+                        plugin.getConfig().set("keys.physical.custom-model-data",
+                                ph.get("customModelData").getAsInt());
+                    if (ph.has("extraLore") && ph.get("extraLore").isJsonArray()) {
+                        List<String> lore = new ArrayList<>();
+                        ph.get("extraLore").getAsJsonArray()
+                                .forEach(el -> lore.add(el.getAsString()));
+                        plugin.getConfig().set("keys.physical.extra-lore", lore);
+                    }
+                    Logger.info("[SaveAll] KEY physical config updated");
+                    log.add("KEY physical config updated");
+                }
+                plugin.saveConfig();
+                Bukkit.getScheduler().runTask(plugin,
+                        () -> plugin.getKeyManager().reload());
+                saved++;
+            }
+
+            Logger.info("[SaveAll] ─── Complete: " + saved + " section(s), "
+                    + log.size() + " change(s) ───");
+            ctx.json(Map.of("status", "ok", "saved", saved, "log", log));
         });
     }
 

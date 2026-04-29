@@ -207,31 +207,25 @@ const KeySettings = {
   },
 
   async saveMode() {
-    const btn = Utils.qs('#btnSaveMode');
-    if (btn) { btn.disabled = true; btn.innerHTML = `<svg class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 00-9-9"/></svg> Saving...`; }
-    try {
-      await API.post('/keys/config/mode', { mode: this._currentMode });
-      const badge = Utils.qs('#modeStatusBadge');
-      if (badge) {
-        badge.textContent  = this._currentMode.toUpperCase();
-        badge.style.background  = this._currentMode === 'virtual' ? 'var(--cyan-dim2)' : 'var(--gold-dim)';
-        badge.style.color       = this._currentMode === 'virtual' ? 'var(--cyan)'      : 'var(--gold)';
-        badge.style.borderColor = this._currentMode === 'virtual' ? 'rgba(26,122,74,.25)' : 'rgba(176,125,26,.25)';
-      }
-      toast(`Key mode saved: ${this._currentMode.toUpperCase()} — run /qc reload in-game`, 'success', 5000);
-    } catch (e) { toast('Failed to save mode: ' + e.message, 'error'); }
-    finally { if (btn) { btn.disabled = false; btn.innerHTML = `${ICONS.diskSave} Save Key Mode`; } }
+    this._updateModeBanners(this._currentMode);
+    State.markDirty('keyConfig', { mode: this._currentMode });
+    const badge = Utils.qs('#modeStatusBadge');
+    if (badge) {
+      badge.textContent = this._currentMode.toUpperCase();
+      badge.style.background  = this._currentMode === 'virtual' ? 'var(--cyan-dim2)' : 'var(--gold-dim)';
+      badge.style.color       = this._currentMode === 'virtual' ? 'var(--cyan)'      : 'var(--gold)';
+      badge.style.borderColor = this._currentMode === 'virtual' ? 'rgba(26,122,74,.25)' : 'rgba(176,125,26,.25)';
+    }
+    toast('Key mode staged for Save All ✓', 'info', 1800);
   },
 
   async savePhysical() {
     const mat  = Utils.qs('#physMat')?.value?.trim() || 'TRIPWIRE_HOOK';
     const cmd  = parseInt(Utils.qs('#physCmd')?.value) || -1;
     const lore = (Utils.qs('#physLore')?.value || '').split('\n').map(s => s.trim()).filter(Boolean);
-    try {
-      await API.post('/keys/config/physical', { material: mat, customModelData: cmd, extraLore: lore });
-      this._physicalCfg = { material: mat, customModelData: cmd, extraLore: lore };
-      toast('Physical key config saved', 'success');
-    } catch (e) { toast('Failed: ' + e.message, 'error'); }
+    State.markDirty('keyConfig', { physical: { material: mat, customModelData: cmd, extraLore: lore } });
+    this._physicalCfg = { material: mat, customModelData: cmd, extraLore: lore };
+    toast('Physical key config staged for Save All ✓', 'info', 1800);
   },
 
   clearPlayerStatus() { const el = Utils.qs('#givePlayerStatus'); if (el) el.style.display = 'none'; },
