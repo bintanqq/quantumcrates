@@ -19,6 +19,9 @@ import me.bintanq.quantumcrates.placeholder.QuantumPlaceholderExpansion;
 import me.bintanq.quantumcrates.processor.RewardProcessor;
 import me.bintanq.quantumcrates.serializer.GsonProvider;
 import me.bintanq.quantumcrates.util.Logger;
+import me.bintanq.quantumcrates.web.StatsScheduler;
+import me.bintanq.quantumcrates.web.WebServer;
+import me.bintanq.quantumcrates.web.WebSocketBridge;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.concurrent.ExecutorService;
@@ -27,10 +30,7 @@ import java.util.concurrent.Executors;
 public final class QuantumCrates extends JavaPlugin {
 
     private static QuantumCrates instance;
-
-    public static QuantumCrates getInstance() {
-        return instance;
-    }
+    public static QuantumCrates getInstance() { return instance; }
 
     private ExecutorService asyncExecutor;
     private DatabaseManager databaseManager;
@@ -43,8 +43,8 @@ public final class QuantumCrates extends JavaPlugin {
     private HookManager hookManager;
     private HologramManager hologramManager;
     private ParticleManager particleManager;
-    private me.bintanq.quantumcrates.web.WebServer webServer;
-    private me.bintanq.quantumcrates.web.StatsScheduler statsScheduler;
+    private WebServer webServer;
+    private StatsScheduler statsScheduler;
 
     @Override
     public void onEnable() {
@@ -56,7 +56,6 @@ public final class QuantumCrates extends JavaPlugin {
         Logger.info("&b=============================");
 
         saveDefaultConfig();
-
         GsonProvider.init();
         me.bintanq.quantumcrates.util.MessageManager.init(this);
 
@@ -74,14 +73,7 @@ public final class QuantumCrates extends JavaPlugin {
             return;
         }
 
-        rarityManager    = new RarityManager(this);
-
-        logManager       = new LogManager(databaseManager, asyncExecutor);
-        playerDataManager = new PlayerDataManager(databaseManager, asyncExecutor);
-        hookManager      = new HookManager(this);
-        rewardProcessor  = new RewardProcessor(this, hookManager);
-        keyManager       = new KeyManager(this, playerDataManager);
-        crateManager     = new CrateManager(this, playerDataManager, rewardProcessor, logManager, keyManager);
+        initManagers();
 
         crateManager.loadAllCrates();
         hookManager.registerAll();
@@ -107,10 +99,10 @@ public final class QuantumCrates extends JavaPlugin {
         particleManager.startAll();
 
         if (getConfig().getBoolean("web.enabled", true)) {
-            webServer = new me.bintanq.quantumcrates.web.WebServer(this);
+            webServer = new WebServer(this);
             webServer.start();
-            me.bintanq.quantumcrates.web.WebSocketBridge.getInstance().setWebServer(webServer);
-            statsScheduler = new me.bintanq.quantumcrates.web.StatsScheduler(this);
+            WebSocketBridge.getInstance().setWebServer(webServer);
+            statsScheduler = new StatsScheduler(this);
             statsScheduler.start();
             Logger.info("Web Dashboard &aenabled &f— port &e" + getConfig().getInt("web.port", 7420));
         }
@@ -122,18 +114,28 @@ public final class QuantumCrates extends JavaPlugin {
     public void onDisable() {
         Logger.info("Shutting down QuantumCrates...");
 
-        if (statsScheduler  != null) statsScheduler.stop();
-        if (webServer       != null) webServer.stop();
-        if (hologramManager != null) hologramManager.removeAll();
-        if (particleManager  != null) particleManager.stopAll();
-        if (crateManager     != null) crateManager.shutdown();
-        if (playerDataManager != null) playerDataManager.flushAll();
-        if (logManager != null) logManager.flushQueue();
+        ifNotNull(statsScheduler,   StatsScheduler::stop);
+        ifNotNull(webServer,        WebServer::stop);
+        ifNotNull(hologramManager,  HologramManager::removeAll);
+        ifNotNull(particleManager,  ParticleManager::stopAll);
+        ifNotNull(crateManager,     CrateManager::shutdown);
+        ifNotNull(playerDataManager,PlayerDataManager::flushAll);
+        ifNotNull(logManager,       LogManager::flushQueue);
 
         if (asyncExecutor != null) asyncExecutor.shutdown();
         if (databaseManager != null) databaseManager.close();
 
         Logger.info("&cQuantumCrates disabled.");
+    }
+
+    private void initManagers() {
+        rarityManager     = new RarityManager(this);
+        logManager        = new LogManager(databaseManager, asyncExecutor);
+        playerDataManager = new PlayerDataManager(databaseManager, asyncExecutor);
+        hookManager       = new HookManager(this);
+        rewardProcessor   = new RewardProcessor(this, hookManager);
+        keyManager        = new KeyManager(this, playerDataManager);
+        crateManager      = new CrateManager(this, playerDataManager, rewardProcessor, logManager, keyManager);
     }
 
     private boolean initDatabase() {
@@ -155,6 +157,11 @@ public final class QuantumCrates extends JavaPlugin {
         }
     }
 
+    /** Null-safe action caller for shutdown sequence. */
+    private static <T> void ifNotNull(T obj, java.util.function.Consumer<T> action) {
+        if (obj != null) action.accept(obj);
+    }
+
     public ExecutorService getAsyncExecutor()          { return asyncExecutor; }
     public DatabaseManager getDatabaseManager()        { return databaseManager; }
     public PlayerDataManager getPlayerDataManager()    { return playerDataManager; }
@@ -166,6 +173,6 @@ public final class QuantumCrates extends JavaPlugin {
     public HookManager getHookManager()                { return hookManager; }
     public HologramManager getHologramManager()        { return hologramManager; }
     public ParticleManager getParticleManager()        { return particleManager; }
-    public me.bintanq.quantumcrates.web.WebServer getWebServer()             { return webServer; }
-    public me.bintanq.quantumcrates.web.StatsScheduler getStatsScheduler()  { return statsScheduler; }
+    public WebServer getWebServer()                    { return webServer; }
+    public StatsScheduler getStatsScheduler()          { return statsScheduler; }
 }

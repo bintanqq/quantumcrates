@@ -14,16 +14,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-/**
- * KeyManager — validasi, konsumsi, dan pemberian key.
- *
- * Mode ditentukan GLOBAL di config.yml → keys.mode:
- *   virtual  = balance di DB (tidak ada item fisik)
- *   physical = item fisik di inventory dengan PDC tag
- *
- * Seluruh server pakai satu mode. Tidak ada campuran virtual+physical
- * dalam satu server untuk menghindari kebingungan player.
- */
 public class KeyManager {
 
     public enum KeyMode { VIRTUAL, PHYSICAL }
@@ -31,19 +21,16 @@ public class KeyManager {
     private final QuantumCrates plugin;
     private final PlayerDataManager playerDataManager;
     private KeyMode globalMode;
-
-    // Physical key config (hanya relevan jika mode = PHYSICAL)
     private Material defaultPhysicalMaterial;
     private int defaultPhysicalCmd;
     private List<String> physicalExtraLore;
 
     public KeyManager(QuantumCrates plugin, PlayerDataManager playerDataManager) {
-        this.plugin            = plugin;
+        this.plugin = plugin;
         this.playerDataManager = playerDataManager;
         reload();
     }
 
-    /** Reload config — dipanggil saat /qc reload */
     public void reload() {
         String modeStr = plugin.getConfig().getString("keys.mode", "virtual").toUpperCase();
         try {
@@ -57,28 +44,20 @@ public class KeyManager {
                 plugin.getConfig().getString("keys.physical.material", "TRIPWIRE_HOOK"));
         if (defaultPhysicalMaterial == null) defaultPhysicalMaterial = Material.TRIPWIRE_HOOK;
 
-        defaultPhysicalCmd  = plugin.getConfig().getInt("keys.physical.custom-model-data", -1);
-        physicalExtraLore   = plugin.getConfig().getStringList("keys.physical.extra-lore");
-
+        defaultPhysicalCmd = plugin.getConfig().getInt("keys.physical.custom-model-data", -1);
+        physicalExtraLore  = plugin.getConfig().getStringList("keys.physical.extra-lore");
         Logger.info("Key mode: &b" + globalMode.name());
     }
 
     public KeyMode getGlobalMode() { return globalMode; }
 
-    /* ─────────────────────── Give Key ─────────────────────── */
-
-    /**
-     * Kasih key ke player — behavior sesuai global mode (virtual/physical).
-     * Dipanggil dari command /qc give dan REST API.
-     */
     public boolean giveKey(Player player, String keyId, int amount) {
         if (globalMode == KeyMode.VIRTUAL) {
             plugin.getDatabaseManager()
-                  .addVirtualKeys(player.getUniqueId(), keyId, amount)
-                  .thenRun(() -> MessageManager.send(player, "key-given-receiver",
-                          "{amount}", String.valueOf(amount), "{key}", keyId));
+                    .addVirtualKeys(player.getUniqueId(), keyId, amount)
+                    .thenRun(() -> MessageManager.send(player, "key-given-receiver",
+                            "{amount}", String.valueOf(amount), "{key}", keyId));
 
-            // Broadcast ke WebSocket
             plugin.getAsyncExecutor().execute(() -> {
                 try {
                     int bal = plugin.getDatabaseManager()
@@ -88,20 +67,15 @@ public class KeyManager {
                 } catch (Exception ignored) {}
             });
         } else {
-            // PHYSICAL — kasih item ke inventory
             int remaining = amount;
             while (remaining > 0) {
                 int stack = Math.min(remaining, 64);
-                ItemStack key = PhysicalKeyItem.create(
-                        plugin, keyId, stack,
+                ItemStack key = PhysicalKeyItem.create(plugin, keyId, stack,
                         "&bCrate Key &8[&7" + keyId + "&8]",
-                        buildPhysicalLore(keyId),
-                        defaultPhysicalMaterial,
-                        defaultPhysicalCmd
-                );
+                        buildPhysicalLore(keyId), defaultPhysicalMaterial, defaultPhysicalCmd);
+                plugin.getAsyncExecutor();
                 var overflow = player.getInventory().addItem(key);
-                overflow.values().forEach(drop ->
-                        player.getWorld().dropItemNaturally(player.getLocation(), drop));
+                overflow.values().forEach(drop -> player.getWorld().dropItemNaturally(player.getLocation(), drop));
                 remaining -= stack;
             }
             MessageManager.send(player, "key-given-receiver",
@@ -117,42 +91,40 @@ public class KeyManager {
         return lore;
     }
 
-    /* ─────────────────────── Has Keys ─────────────────────── */
-
     public boolean hasRequiredKeys(Player player, Crate crate) {
-        for (Crate.KeyRequirement req : crate.getRequiredKeys()) {
-            if (countAvailable(player, req) < req.getAmount()) return false;
-        }
-        return true;
+        return crate.getRequiredKeys().stream()
+                .allMatch(req -> countAvailable(player, req) >= req.getAmount());
     }
 
     public int countPossibleOpens(Player player, Crate crate) {
-        int possible = Integer.MAX_VALUE;
-        for (Crate.KeyRequirement req : crate.getRequiredKeys()) {
-            int opens = countAvailable(player, req) / Math.max(1, req.getAmount());
-            possible = Math.min(possible, opens);
-        }
-        return possible == Integer.MAX_VALUE ? 0 : possible;
+        return crate.getRequiredKeys().stream()
+                .mapToInt(req -> countAvailable(player, req) / Math.max(1, req.getAmount()))
+                .min()
+                .orElse(0);
     }
 
     private int countAvailable(Player player, Crate.KeyRequirement req) {
         return switch (req.getType()) {
-            case VIRTUAL    -> getVirtualBalance(player, req.getKeyId());
-            case PHYSICAL   -> countPhysical(player, req.getKeyId());
-            case MMOITEMS   -> { var h = plugin.getHookManager().getMmoItemsHook();   yield h != null ? h.countKey(player, req.getKeyId()) : 0; }
-            case ITEMSADDER -> { var h = plugin.getHookManager().getItemsAdderHook(); yield h != null ? h.countKey(player, req.getKeyId()) : 0; }
-            case ORAXEN     -> { var h = plugin.getHookManager().getOraxenHook();     yield h != null ? h.countKey(player, req.getKeyId()) : 0; }
+            case VIRTUAL  -> getVirtualBalance(player, req.getKeyId());
+            case PHYSICAL -> countPhysical(player, req.getKeyId());
+            default       -> getHookCount(player, req);
         };
     }
 
-    /* ─────────────────────── Consume Keys ─────────────────────── */
+    /** Delegates to the appropriate item-plugin hook for count operations. */
+    private int getHookCount(Player player, Crate.KeyRequirement req) {
+        return switch (req.getType()) {
+            case MMOITEMS   -> { var h = plugin.getHookManager().getMmoItemsHook();   yield h != null ? h.countKey(player, req.getKeyId()) : 0; }
+            case ITEMSADDER -> { var h = plugin.getHookManager().getItemsAdderHook(); yield h != null ? h.countKey(player, req.getKeyId()) : 0; }
+            case ORAXEN     -> { var h = plugin.getHookManager().getOraxenHook();     yield h != null ? h.countKey(player, req.getKeyId()) : 0; }
+            default         -> 0;
+        };
+    }
 
     public boolean consumeKeys(Player player, Crate crate) {
-        // Pre-check dulu
         for (Crate.KeyRequirement req : crate.getRequiredKeys()) {
             if (countAvailable(player, req) < req.getAmount()) return false;
         }
-        // Consume semua
         for (Crate.KeyRequirement req : crate.getRequiredKeys()) {
             if (!consumeKey(player, req)) {
                 Logger.warn("Key consume gagal mid-way: " + player.getName() + " key=" + req.getKeyId());
@@ -164,15 +136,21 @@ public class KeyManager {
 
     private boolean consumeKey(Player player, Crate.KeyRequirement req) {
         return switch (req.getType()) {
-            case VIRTUAL    -> removeVirtual(player, req.getKeyId(), req.getAmount());
-            case PHYSICAL   -> removePhysical(player, req.getKeyId(), req.getAmount());
-            case MMOITEMS   -> { var h = plugin.getHookManager().getMmoItemsHook();   yield h != null && h.removeKey(player, req.getKeyId(), req.getAmount()); }
-            case ITEMSADDER -> { var h = plugin.getHookManager().getItemsAdderHook(); yield h != null && h.removeKey(player, req.getKeyId(), req.getAmount()); }
-            case ORAXEN     -> { var h = plugin.getHookManager().getOraxenHook();     yield h != null && h.removeKey(player, req.getKeyId(), req.getAmount()); }
+            case VIRTUAL  -> removeVirtual(player, req.getKeyId(), req.getAmount());
+            case PHYSICAL -> removePhysical(player, req.getKeyId(), req.getAmount());
+            default       -> removeHookKey(player, req);
         };
     }
 
-    /* ─────────────────────── Virtual ─────────────────────── */
+    /** Delegates to the appropriate item-plugin hook for remove operations. */
+    private boolean removeHookKey(Player player, Crate.KeyRequirement req) {
+        return switch (req.getType()) {
+            case MMOITEMS   -> { var h = plugin.getHookManager().getMmoItemsHook();   yield h != null && h.removeKey(player, req.getKeyId(), req.getAmount()); }
+            case ITEMSADDER -> { var h = plugin.getHookManager().getItemsAdderHook(); yield h != null && h.removeKey(player, req.getKeyId(), req.getAmount()); }
+            case ORAXEN     -> { var h = plugin.getHookManager().getOraxenHook();     yield h != null && h.removeKey(player, req.getKeyId(), req.getAmount()); }
+            default         -> false;
+        };
+    }
 
     public int getVirtualBalance(Player player, String keyId) {
         try {
@@ -195,8 +173,6 @@ public class KeyManager {
             return false;
         }
     }
-
-    /* ─────────────────────── Physical ─────────────────────── */
 
     private int countPhysical(Player player, String keyId) {
         int count = 0;
@@ -223,13 +199,10 @@ public class KeyManager {
         return remaining <= 0;
     }
 
-    /** Untuk REST API /api/keys */
     public Collection<String> getKnownKeyIds() {
-        // Collect dari semua crate yang terdaftar
         Set<String> ids = new LinkedHashSet<>();
-        for (Crate c : plugin.getCrateManager().getAllCrates()) {
-            c.getRequiredKeys().forEach(r -> ids.add(r.getKeyId()));
-        }
+        plugin.getCrateManager().getAllCrates()
+                .forEach(c -> c.getRequiredKeys().forEach(r -> ids.add(r.getKeyId())));
         return ids;
     }
 }
