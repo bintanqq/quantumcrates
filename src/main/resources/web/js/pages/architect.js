@@ -662,11 +662,17 @@ const RarityEditor = {
   addRow(){const nextOrder=this.draft.length>0?Math.max(...this.draft.map(r=>r.order))+1:0;this.draft.push({id:'CUSTOM_'+nextOrder,displayName:'Custom',color:'&f',hexColor:'#aaaaaa',order:nextOrder,borderMaterial:'GRAY_STAINED_GLASS_PANE',icon:'⬜'});this._render();},
   removeRow(idx){if(this.draft.length<=1){toast('Must have at least one rarity!','error');return;}this.draft.splice(idx,1);this._render();},
   async save() {
-      const crate = State.currentCrate; if (!crate) return;
-      State.setCrate(crate);
-      State.markDirty('crate', { id: crate.id });
-      this.dirty = false;
-      toast('Crate staged — click Save All to apply', 'info', 1800);
+      for (const r of this.draft) {
+          if (!r.displayName?.trim()) { toast('All rarities must have a display name', 'error'); return; }
+          if (!r.id?.trim()) r.id = r.displayName.toUpperCase().replace(/\s+/g,'_').replace(/[^A-Z0-9_]/g,'');
+          if (!r.color || !r.color.startsWith('&')) r.color = this._colorToMinecraft(r.hexColor);
+      }
+      State.setRarities(this.draft);
+      State.markDirty('rarities', this.draft);
+      Modal.close();
+      toast('Rarities staged for Save All ✓', 'info', 1800);
+      const el = document.getElementById('page-architect');
+      if (el) Architect.render(el);
   },
   async reload() {
     try {

@@ -6,12 +6,6 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * StatsScheduler — push server stats ke semua WS clients setiap 30 detik.
- *
- * Menggunakan Bukkit scheduler (main thread) untuk baca TPS dan online players,
- * lalu dispatch ke WebSocketBridge (thread-safe).
- */
 public class StatsScheduler {
 
     private final QuantumCrates plugin;
@@ -23,7 +17,6 @@ public class StatsScheduler {
     }
 
     public void start() {
-        // Setiap 30 detik (600 ticks)
         task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             double tps = Bukkit.getTPS()[0];
             int online  = Bukkit.getOnlinePlayers().size();
@@ -36,9 +29,7 @@ public class StatsScheduler {
         if (task != null) task.cancel();
     }
 
-    /** Dipanggil dari CrateManager setiap kali ada opening berhasil */
     public void incrementOpenings() { openingsToday.incrementAndGet(); }
 
-    /** Reset counter setiap tengah malam (bisa dipanggil via scheduler external) */
     public void resetDailyCounter() { openingsToday.set(0); }
 }

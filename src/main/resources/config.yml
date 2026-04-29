@@ -133,6 +133,8 @@ messages:
   info-no-location:  "&7Location: &cNot set &8(/qc setloc {crate})"
   info-keys-header:  "&7Required Keys:"
   info-key-entry:    "  &8▸ &e{key} &7x{amount} &8[{type}]"
+  schedule-always: "Always open"
+  cooldown-none: "None"
 
   # ── Usage (command syntax hints) ──
   usage-give:      "&cUsage: /qc give <player> <keyId> <amount>"

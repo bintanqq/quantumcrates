@@ -126,7 +126,6 @@ const HologramModal = {
     if (!preview) return;
     const crate = State.currentCrate;
 
-    // Hapus semua line lama kecuali label
     const label = preview.querySelector('div');
     preview.innerHTML = '';
     preview.appendChild(label || Object.assign(document.createElement('div'), {
@@ -155,7 +154,7 @@ const HologramModal = {
     const crate = State.currentCrate;
     const idx = this.focusedIdx;
     if (idx === null || idx === undefined) {
-      toast('Klik dulu di input baris yang mau disisipkan kodenya', 'info');
+      toast('Click on the line input first before inserting a color code', 'info');
       return;
     }
     const inputs = Utils.qsa('#holoLines input');

@@ -97,7 +97,7 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
         MessageManager.send(sender, "info-rewards", "{count}", String.valueOf(crate.getRewards().size()));
         MessageManager.send(sender, "info-total-weight", "{weight}", String.format("%.2f", crate.getTotalWeight()));
         MessageManager.send(sender, "info-cooldown", "{time}",
-                crate.getCooldownMs() > 0 ? TimeUtil.formatDuration(crate.getCooldownMs()) : "Tidak ada");
+                crate.getCooldownMs() > 0 ? TimeUtil.formatDuration(crate.getCooldownMs()) : MessageManager.getRaw("cooldown-none"));
 
         if (crate.getPity().isEnabled()) {
             MessageManager.send(sender, "info-pity-on",
@@ -110,7 +110,7 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
         MessageManager.send(sender, crate.isMassOpenEnabled() ? "info-massopen-on" : "info-massopen-off",
                 "{limit}", crate.getMassOpenLimit() < 0 ? "unlimited" : String.valueOf(crate.getMassOpenLimit()));
         MessageManager.send(sender, "info-schedule",
-                "{schedule}", crate.getSchedule() != null ? crate.getSchedule().getNextOpenDescription() : "Selalu buka");
+                "{schedule}", crate.getSchedule() != null ? crate.getSchedule().getNextOpenDescription() : MessageManager.getRaw("schedule-always"));
         MessageManager.send(sender, crate.isCurrentlyOpenable() ? "info-openable" : "info-not-openable");
 
         if (crate.getLocation() != null) {

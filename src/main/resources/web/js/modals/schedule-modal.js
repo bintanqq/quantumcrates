@@ -282,6 +282,7 @@ const ScheduleModal = {
       this._onSave?.();
       Modal.close();
       toast('Schedule saved — crate is always open.', 'success');
+      return;
     }
 
     const sch = { mode, timezone: tz };
