@@ -8,12 +8,6 @@ import org.bukkit.Location;
 
 import java.util.List;
 
-/**
- * DecentHologramsProvider — uses DecentHolograms API for holograms.
- *
- * DecentHolograms handles persistence, visibility, and animation natively.
- * We simply create/update/delete via DHAPI.
- */
 public class DecentHologramsProvider implements HologramProvider {
 
     private final QuantumCrates plugin;

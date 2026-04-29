@@ -154,6 +154,19 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
         if (targeted == null) { MessageManager.send(sender, "setloc-no-target"); return; }
 
         var loc = targeted.getLocation();
+        for (Crate other : crateManager().getAllCrates()) {
+            if (other.getId().equals(crate.getId())) continue;
+            Crate.SerializableLocation otherLoc = other.getLocation();
+            if (otherLoc != null
+                    && otherLoc.world.equals(loc.getWorld().getName())
+                    && (int) otherLoc.x == loc.getBlockX()
+                    && (int) otherLoc.y == loc.getBlockY()
+                    && (int) otherLoc.z == loc.getBlockZ()) {
+                MessageManager.send(sender, "setloc-already-taken",
+                        "{crate}", other.getId());
+                return;
+            }
+        }
         crate.setLocation(new Crate.SerializableLocation(
                 loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
         crateManager().saveCrate(crate);

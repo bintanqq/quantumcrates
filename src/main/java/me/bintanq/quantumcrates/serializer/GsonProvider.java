@@ -11,18 +11,6 @@ import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * GsonProvider — singleton GSON instance configured for QuantumCrates.
- *
- * Features:
- *  - Pretty-printing for human-readable crate JSON files
- *  - UUID serialization as plain string
- *  - Null-safe handling
- *  - Polymorphic-safe: all model classes use @SerializedName
- *
- * This same GSON instance will be reused by the Phase 2 Javalin WebSocket
- * server for real-time JSON serialization — no additional setup needed.
- */
 public final class GsonProvider {
 
     private static Gson GSON;

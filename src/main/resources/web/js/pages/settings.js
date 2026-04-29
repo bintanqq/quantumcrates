@@ -76,6 +76,14 @@ const Settings = {
     `;
 
     this.refreshStatus();
+    API.get('/config/web').then(cfg => {
+        const portEl = Utils.qs('#cfgPort');
+        const corsEl = Utils.qs('#cfgCors');
+        const rlEl   = Utils.qs('#cfgRateLimit');
+        if (portEl) portEl.value = cfg.port;
+        if (corsEl) corsEl.value = cfg.cors;
+        if (rlEl)   rlEl.value   = cfg.rateLimit;
+    }).catch(() => {});
     const dbSeg = Utils.el('div');
     dbSeg.appendChild(ToggleSwitch('Use MySQL (default: SQLite)', false, v => {
       Utils.qs('#dbFields').innerHTML = v ? `
@@ -86,6 +94,7 @@ const Settings = {
     }));
     Utils.qs('#dbModeToggle')?.appendChild(dbSeg);
   },
+
 
   async refreshStatus() {
     const card = Utils.qs('#serverStatusCard'); if (!card) return;
@@ -105,6 +114,7 @@ const Settings = {
       updateStatusDot(false);
     }
   },
+
 
   save() { toast('Settings saved — restart server to apply DB/port changes.', 'info'); },
   async reloadPlugin() {

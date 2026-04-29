@@ -6,15 +6,7 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-/**
- * CrateSchedule — defines WHEN a crate can be opened.
- *
- * Supports three modes:
- *  - ALWAYS: No restriction (schedule = null in Crate is preferred for this).
- *  - TIME_WINDOW: Openable between startTime and endTime each day.
- *  - DAYS_OF_WEEK: Openable only on specific days (optionally within a time window).
- *  - EVENT: Openable only between two absolute epoch-millis timestamps.
- */
+
 public class CrateSchedule {
 
     @SerializedName("mode")

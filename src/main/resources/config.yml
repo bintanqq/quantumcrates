@@ -52,22 +52,17 @@ holograms:
   update-interval: 10
 
 # ─────────────────────────────────────────────────────────────
-# PARTICLES
-# ─────────────────────────────────────────────────────────────
-particles:
-  idle-interval: 5
-
-# ─────────────────────────────────────────────────────────────
 # WEB DASHBOARD
+# CHANGING THIS REQUIRES FULL PLUGIN RESTART/SERVER RESTART
 # ─────────────────────────────────────────────────────────────
 web:
   enabled: true
+  hostname: ""
   port: 7420
   secret-token: "CHANGE_THIS_NOW_MINIMUM_32_RANDOM_CHARS"
   cors-origins: "*"
   rate-limit: 120
   log-requests: false
-  hostname: ""
 
 # ─────────────────────────────────────────────────────────────
 # CHAT MESSAGES
@@ -110,6 +105,7 @@ messages:
   pity-reset-done: "&aPity of &e{player} &aon crate &e{crate} &ahas been reset."
   setloc-success:    "&aCrate &e{crate} &alocation set to &e{x}&7, &e{y}&7, &e{z} &8[{world}]"
   setloc-no-target:  "&cLook at a block within 5 blocks range."
+  setloc-already-taken: "&cThat block is already used by crate &e{crate}&c."
 
   # ── Reward Broadcast ──
   broadcast-default: "&6✦ &e{player} &7won &6{reward} &7from &e{crate}&7!"

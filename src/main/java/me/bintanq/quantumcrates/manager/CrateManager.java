@@ -113,7 +113,9 @@ public class CrateManager {
         if (!crate.isCurrentlyOpenable()) return OpenResult.NOT_SCHEDULED;
 
         PlayerData data = playerDataManager.getOrEmpty(player.getUniqueId());
-        if (crate.getCooldownMs() > 0 && data.isOnCooldown(crateId, crate.getCooldownMs()))
+        if (crate.getCooldownMs() > 0
+                && data.isOnCooldown(crateId, crate.getCooldownMs())
+                && !player.hasPermission("quantumcrates.bypasscooldown"))
             return OpenResult.ON_COOLDOWN;
 
         if (!keyManager.hasRequiredKeys(player, crate)) return OpenResult.MISSING_KEY;

@@ -29,6 +29,7 @@ permissions:
       quantumcrates.preview: true
       quantumcrates.use: true
       quantumcrates.web: true
+      quantumcrates.bypasscooldown: true
   quantumcrates.use:
     description: Can use crate
     default: true
@@ -38,6 +39,9 @@ permissions:
   quantumcrates.massopen:
     description: Mass open crate
     default: true
+  quantumcrates.bypasscooldown:
+    description: Bypass crate cooldown
+    default: op
   quantumcrates.web:
     description: Generate web dashboard magic link
     default: op

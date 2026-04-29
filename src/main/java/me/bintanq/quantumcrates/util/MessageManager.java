@@ -3,18 +3,7 @@ package me.bintanq.quantumcrates.util;
 import me.bintanq.quantumcrates.QuantumCrates;
 import org.bukkit.command.CommandSender;
 
-/**
- * MessageManager — ZERO hardcoded messages.
- *
- * All chat messages are read from config.yml section "messages".
- * All GUI messages are read from config.yml section "gui-messages".
- * Both can be overridden from the Web Dashboard without a restart.
- *
- * Usage:
- *   MessageManager.send(player, "reward-received", "{reward}", "Diamond");
- *   MessageManager.getGui("prev-button-name");
- *   MessageManager.getGui("info-pity-label", "{pity}", "5", "{pity_max}", "100");
- */
+
 public final class MessageManager {
 
     private static QuantumCrates plugin;
@@ -25,10 +14,7 @@ public final class MessageManager {
 
     /* ─────────────────────── Chat Messages ─────────────────────── */
 
-    /**
-     * Send a chat message with prefix and placeholder replacement.
-     * Placeholder format: key-value pairs, e.g. "{player}", "Steve", "{amount}", "5"
-     */
+
     public static void send(CommandSender sender, String key, String... placeholders) {
         sender.sendMessage(get(key, placeholders));
     }
@@ -37,18 +23,12 @@ public final class MessageManager {
         sender.sendMessage(getRaw(key, placeholders));
     }
 
-    /**
-     * Get a chat message with prefix applied.
-     */
     public static String get(String key, String... placeholders) {
         String prefix = getRaw("prefix");
         String msg    = getRaw(key, placeholders);
         return color(prefix + msg);
     }
 
-    /**
-     * Get a chat message without prefix.
-     */
     public static String getRaw(String key, String... placeholders) {
         String msg = plugin.getConfig().getString("messages." + key,
                 "[MSG NOT FOUND: " + key + "]");
@@ -64,11 +44,6 @@ public final class MessageManager {
 
     /* ─────────────────────── GUI Messages ─────────────────────── */
 
-    /**
-     * Get a GUI message (inventory item name / lore) with placeholder replacement.
-     * Reads from config.yml section "gui-messages".
-     * Returns colorized string, empty string if key not found.
-     */
     public static String getGui(String key, String... placeholders) {
         String msg = plugin.getConfig().getString("gui-messages." + key, "");
         for (int i = 0; i + 1 < placeholders.length; i += 2) {
@@ -77,9 +52,7 @@ public final class MessageManager {
         return color(msg);
     }
 
-    /**
-     * Check if a GUI message key exists.
-     */
+
     public static boolean hasGui(String key) {
         return plugin.getConfig().contains("gui-messages." + key);
     }

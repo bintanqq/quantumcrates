@@ -111,6 +111,7 @@ public class WebServer {
         registerPlayerRoutes();
         registerServerRoutes();
         registerMessagesRoutes();
+        registerWebConfigRoute();
         registerRarityRoutes();
         registerSaveAllRoute();
         registerWebSocket();
@@ -535,6 +536,16 @@ public class WebServer {
                         "timestamp",     System.currentTimeMillis()
                 )))
         );
+    }
+
+    private void registerWebConfigRoute() {
+        app.get("/api/config/web", ctx -> {
+            ctx.json(Map.of(
+                    "port",      plugin.getConfig().getInt("web.port", 7420),
+                    "cors",      plugin.getConfig().getString("web.cors-origins", "*"),
+                    "rateLimit", plugin.getConfig().getInt("web.rate-limit", 120)
+            ));
+        });
     }
 
     private void registerMessagesRoutes() {

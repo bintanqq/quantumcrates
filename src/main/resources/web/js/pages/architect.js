@@ -160,7 +160,7 @@ const Architect = {
       { svg: schedSvg, label: 'Schedule', sub: schedDesc(), color: hasSchedule ? 'var(--purple)' : 'var(--text3)', bg: hasSchedule ? 'var(--purple-dim)' : 'var(--bg3)', border: hasSchedule ? 'rgba(107,70,193,.25)' : 'var(--border)', onclick: () => ScheduleModal.open(crate, () => { Architect.dirty = true; Architect.renderConfigCards(); }) },
       { svg: keySvg,   label: 'Key Requirements', sub: keyCount ? `${keyCount} key type${keyCount>1?'s':''} required` : 'None configured', color: 'var(--blue)', bg: 'var(--blue-dim)', border: 'rgba(26,86,160,.25)', onclick: () => KeyReqModal.open(crate, () => { Architect.dirty = true; Architect.renderConfigCards(); }) },
       { svg: holoSvg,  label: 'Hologram', sub: (crate.hologramLines?.length||0)+' lines', color: 'var(--green)', bg: 'var(--green-dim)', border: 'rgba(26,122,74,.25)', onclick: () => HologramModal.open() },
-      { svg: delSvg,   label: 'Delete Crate', sub: 'Permanently remove', color: 'var(--red)', bg: 'var(--red-dim)', border: 'rgba(192,57,43,.25)', onclick: () => Architect.confirmDeleteCrate(crate.id) },
+      { svg: delSvg,   label: 'Delete Crate', sub: 'Permanently remove', color: 'var(--red)', bg: 'var(--red-dim)', border: 'rgba(192,57,43,.25)', onclick: () => Architect.confirmDeleteCrate(State.currentCrateId) },
     ];
 
     cards.forEach(({ svg, label, sub, color, bg, border, onclick }) => {
@@ -257,26 +257,26 @@ const Architect = {
       <div class="modal-body">
         <div style="padding:14px;background:var(--red-dim);border:1px solid rgba(192,57,43,.2);border-radius:var(--radius-sm);font-size:12.5px;line-height:1.7">
           <div style="font-weight:700;color:var(--red);margin-bottom:5px">Delete this crate?</div>
-          <div style="color:var(--text2)">Crate <code style="color:var(--cyan);background:var(--bg3);padding:1px 5px;border-radius:3px">${id}</code> will be permanently removed.</div>
+          <div style="color:var(--text2)">Crate <code style="color:var(--cyan);background:var(--bg3);padding:1px 5px;border-radius:3px">${id.toString()}</code> will be permanently removed.</div>
         </div>
         <div style="margin-top:12px">
           <label class="field-label" style="margin-bottom:5px;display:block">Type the crate ID to confirm:</label>
-          <input class="field-input" id="deleteConfirmInput" placeholder="${id}"/>
+          <input class="field-input" id="deleteConfirmInput" placeholder="${id.toString()}" autocomplete:"off"/>
         </div>
       </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" onclick="Modal.close()">Cancel</button>
-        <button class="btn btn-danger" id="btnConfirmDelete" disabled onclick="Architect._doDelete('${id}')">Delete Permanently</button>
+        <button class="btn btn-danger" id="btnConfirmDelete" disabled onclick="Architect._doDelete('${id.toString()}')">Delete Permanently</button>
       </div>
     `, 'modal-md');
-    Utils.qs('#deleteConfirmInput').oninput = function() { Utils.qs('#btnConfirmDelete').disabled = this.value !== id; };
+    Utils.qs('#deleteConfirmInput').oninput = function() { Utils.qs('#btnConfirmDelete').disabled = this.value !== id.toString(); };
   },
 
   async _doDelete(id) {
     State.markDirty('crate', { id, deleted: true });
     State.deleteCrate(id);
     Modal.close();
-    toast(`Crate "${id}" staged for deletion — confirm with Save All.`, 'info');
+    toast(`Crate "${id.toString()}" staged for deletion — confirm with Save All.`, 'info');
     if (State.crateOrder.length > 0) this.loadCrate(State.crateOrder[0]);
     else {
       State.currentCrateId = null;
@@ -400,7 +400,7 @@ const CrateSettingsModal = {
       <div class="modal-body">
         <div style="display:flex;flex-direction:column;gap:10px">
           <div class="field-row">
-            <div class="field-group"><label class="field-label">Crate ID</label><input class="field-input" id="csId" value="${crate.id||''}" placeholder="legendary_crate"/></div>
+            <div class="field-group"><label class="field-label">Crate ID</label><input class="field-input" id="csId" value="${crate.id||''}" placeholder="legendary_crate" autocomplete="off"/></div>
             <div class="field-group"><label class="field-label">Display Name</label><input class="field-input" id="csName" value="${crate.displayName||''}" placeholder="&6Legendary Crate"/></div>
           </div>
           <div class="field-row">
@@ -438,7 +438,7 @@ const CrateSettingsModal = {
             <div class="section-label" style="margin-bottom:7px">OPEN PARTICLES</div>
             <div class="field-row" style="margin-bottom:7px">
               <div class="field-group"><label class="field-label">Type</label>
-                <select class="field-input" id="csOpenType">${['RING','HELIX','SPHERE','SPIRAL','RAIN','NONE'].map(t=>`<option value="${t}" ${(crate.openAnimation?.type||'RING')===t?'selected':''}>${t}</option>`).join('')}</select>
+                <select class="field-input" id="csOpenType">${['HELIX','SPIRAL','SPHERE','BEACON','TORNADO','VORTEX','SIMPLE','NONE'].map(t=>`<option value="${t}" ${(crate.openAnimation?.type||'SIMPLE')===t?'selected':''}>${t}</option>`).join('')}</select>
               </div>
               <div class="field-group"><label class="field-label">Particle</label>
                 <select class="field-input" id="csOpenParticle">${['HAPPY_VILLAGER','FLAME','ENCHANT','END_ROD','WITCH','TOTEM_OF_UNDYING','DRAGON_BREATH','SOUL_FIRE_FLAME','CRIMSON_SPORE','GLOW','SNOWFLAKE'].map(p=>`<option value="${p}" ${(crate.openAnimation?.particle||'HAPPY_VILLAGER')===p?'selected':''}>${p}</option>`).join('')}</select>
@@ -491,12 +491,18 @@ const CrateSettingsModal = {
 
       if (!idEl || !nameEl) { toast('Modal not ready', 'error'); return; }
 
-      c.id            = idEl.value.trim();
+      const oldId = c.id;
+      c.id = idEl.value.trim() || oldId;
+      if (c.id !== oldId) {
+        delete State.crates[oldId];
+        State.crateOrder = State.crateOrder.map(i => i === oldId ? c.id : i);
+      }
+      State.currentCrateId = c.id;
       c.displayName   = nameEl.value;
       c.cooldownMs    = parseInt(cooldownEl?.value) || 0;
       c.massOpenLimit = parseInt(massLimitEl?.value) ?? -1;
       c.idleAnimation = { type: idleTypeEl?.value || 'HELIX', particle: idleParticleEl?.value || 'HAPPY_VILLAGER' };
-      c.openAnimation = { type: openTypeEl?.value || 'RING',  particle: openParticleEl?.value || 'HAPPY_VILLAGER' };
+      c.openAnimation = { type: openTypeEl?.value || 'SIMPLE',  particle: openParticleEl?.value || 'HAPPY_VILLAGER' };
       c.guiAnimation  = guiAnimEl?.value || 'ROULETTE';
 
       State.setCrate(c);

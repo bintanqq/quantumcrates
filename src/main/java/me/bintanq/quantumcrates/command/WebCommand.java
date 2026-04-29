@@ -44,7 +44,7 @@ public class WebCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(MessageManager.getRaw("web-header-title"));
         sender.sendMessage(MessageManager.getRaw("web-header-bar"));
         sender.sendMessage(MessageManager.getRaw("web-link-label"));
-        sender.sendMessage(MessageManager.color("&b" + url));
+        sender.sendMessage(MessageManager.color("&c" + url));
         sender.sendMessage(MessageManager.getRaw("web-link-hint"));
         sender.sendMessage(MessageManager.getRaw("web-header-bar"));
         sender.sendMessage("");
