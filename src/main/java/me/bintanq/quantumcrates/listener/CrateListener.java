@@ -15,14 +15,6 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
-/**
- * CrateListener — semua interaksi player dengan crate block.
- *
- * Controls:
- *  LEFT-CLICK  block         → Preview GUI (lihat semua reward + chance %)
- *  RIGHT-CLICK block         → Buka crate (consume key, roll reward)
- *  SHIFT+RIGHT-CLICK block   → Mass open (buka semua key sekaligus)
- */
 public class CrateListener implements Listener {
 
     private final QuantumCrates plugin;
@@ -37,13 +29,11 @@ public class CrateListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        // Ignore off-hand duplicate calls
         if (event.getHand() != EquipmentSlot.HAND) return;
 
         Block block = event.getClickedBlock();
         Action action = event.getAction();
 
-        // LEFT-CLICK → Preview GUI
         if (action == Action.LEFT_CLICK_BLOCK) {
             if (block == null) return;
             Crate crate = getCrateAtBlock(block);
@@ -53,7 +43,6 @@ public class CrateListener implements Listener {
             return;
         }
 
-        // RIGHT-CLICK → Open atau Mass Open
         if (action == Action.RIGHT_CLICK_BLOCK) {
             if (block == null) return;
             Crate crate = getCrateAtBlock(block);
@@ -89,21 +78,18 @@ public class CrateListener implements Listener {
     }
 
     private Crate getCrateAtBlock(Block block) {
-        Location blockLoc = block.getLocation();
-        String worldName  = blockLoc.getWorld() != null ? blockLoc.getWorld().getName() : null;
-        if (worldName == null) return null;
-        for (Crate crate : crateManager.getAllCrates()) {
-            Crate.SerializableLocation loc = crate.getLocation();
-            if (loc == null) continue;
-            if (!worldName.equals(loc.world)) continue;
-            if ((int) loc.x == blockLoc.getBlockX()
-                    && (int) loc.y == blockLoc.getBlockY()
-                    && (int) loc.z == blockLoc.getBlockZ()) {
-                return crate;
-            }
-        }
-        return null;
+        String worldName = block.getWorld().getName();
+        int bx = block.getX(), by = block.getY(), bz = block.getZ();
+        return crateManager.getAllCrates().stream()
+                .filter(c -> {
+                    Crate.SerializableLocation loc = c.getLocation();
+                    return loc != null
+                            && worldName.equals(loc.world)
+                            && (int) loc.x == bx
+                            && (int) loc.y == by
+                            && (int) loc.z == bz;
+                })
+                .findFirst()
+                .orElse(null);
     }
-
-    private String color(String s) { return s.replace("&", "\u00A7"); }
 }

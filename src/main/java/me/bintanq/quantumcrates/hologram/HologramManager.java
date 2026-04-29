@@ -21,10 +21,10 @@ public class HologramManager {
         if ("decentholograms".equalsIgnoreCase(providerName)
                 && plugin.getServer().getPluginManager().getPlugin("DecentHolograms") != null) {
             this.provider = new DecentHologramsProvider(plugin);
-            Logger.info("Hologram provider: &bDecentHolograms");
+            Logger.info("Hologram provider: &aDecentHolograms");
         } else {
             this.provider = new PacketHologramProvider(plugin);
-            Logger.info("Hologram provider: &bPacket (built-in)");
+            Logger.info("Hologram provider: &aPacket (built-in)");
         }
     }
 

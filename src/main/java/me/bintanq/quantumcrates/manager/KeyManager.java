@@ -36,7 +36,7 @@ public class KeyManager {
         try {
             globalMode = KeyMode.valueOf(modeStr);
         } catch (IllegalArgumentException e) {
-            Logger.warn("keys.mode tidak valid '" + modeStr + "', fallback ke VIRTUAL.");
+            Logger.warn("Invalid keys.mode '" + modeStr + "', falling back to VIRTUAL.");
             globalMode = KeyMode.VIRTUAL;
         }
 
@@ -46,7 +46,7 @@ public class KeyManager {
 
         defaultPhysicalCmd = plugin.getConfig().getInt("keys.physical.custom-model-data", -1);
         physicalExtraLore  = plugin.getConfig().getStringList("keys.physical.extra-lore");
-        Logger.info("Key mode: &b" + globalMode.name());
+        Logger.info("Key mode: &a" + globalMode.name());
     }
 
     public KeyMode getGlobalMode() { return globalMode; }
@@ -70,10 +70,12 @@ public class KeyManager {
             int remaining = amount;
             while (remaining > 0) {
                 int stack = Math.min(remaining, 64);
+                String displayName = plugin.getConfig().getString(
+                                "keys.physical.display-name", "&bCrate Key &8[&7{key}&8]")
+                        .replace("{key}", keyId);
                 ItemStack key = PhysicalKeyItem.create(plugin, keyId, stack,
-                        "&bCrate Key &8[&7" + keyId + "&8]",
+                        displayName,
                         buildPhysicalLore(keyId), defaultPhysicalMaterial, defaultPhysicalCmd);
-                plugin.getAsyncExecutor();
                 var overflow = player.getInventory().addItem(key);
                 overflow.values().forEach(drop -> player.getWorld().dropItemNaturally(player.getLocation(), drop));
                 remaining -= stack;
@@ -86,7 +88,9 @@ public class KeyManager {
 
     private List<String> buildPhysicalLore(String keyId) {
         List<String> lore = new ArrayList<>();
-        lore.add("&7Key ID: &e" + keyId);
+        String idLine = plugin.getConfig().getString(
+                "keys.physical.id-lore", "&7Key ID: &e{key}").replace("{key}", keyId);
+        lore.add(idLine);
         lore.addAll(physicalExtraLore);
         return lore;
     }
@@ -107,17 +111,9 @@ public class KeyManager {
         return switch (req.getType()) {
             case VIRTUAL  -> getVirtualBalance(player, req.getKeyId());
             case PHYSICAL -> countPhysical(player, req.getKeyId());
-            default       -> getHookCount(player, req);
-        };
-    }
-
-    /** Delegates to the appropriate item-plugin hook for count operations. */
-    private int getHookCount(Player player, Crate.KeyRequirement req) {
-        return switch (req.getType()) {
             case MMOITEMS   -> { var h = plugin.getHookManager().getMmoItemsHook();   yield h != null ? h.countKey(player, req.getKeyId()) : 0; }
             case ITEMSADDER -> { var h = plugin.getHookManager().getItemsAdderHook(); yield h != null ? h.countKey(player, req.getKeyId()) : 0; }
             case ORAXEN     -> { var h = plugin.getHookManager().getOraxenHook();     yield h != null ? h.countKey(player, req.getKeyId()) : 0; }
-            default         -> 0;
         };
     }
 
@@ -127,7 +123,7 @@ public class KeyManager {
         }
         for (Crate.KeyRequirement req : crate.getRequiredKeys()) {
             if (!consumeKey(player, req)) {
-                Logger.warn("Key consume gagal mid-way: " + player.getName() + " key=" + req.getKeyId());
+                Logger.warn("Key consume failed mid-way: " + player.getName() + " key=" + req.getKeyId());
                 return false;
             }
         }
@@ -138,17 +134,9 @@ public class KeyManager {
         return switch (req.getType()) {
             case VIRTUAL  -> removeVirtual(player, req.getKeyId(), req.getAmount());
             case PHYSICAL -> removePhysical(player, req.getKeyId(), req.getAmount());
-            default       -> removeHookKey(player, req);
-        };
-    }
-
-    /** Delegates to the appropriate item-plugin hook for remove operations. */
-    private boolean removeHookKey(Player player, Crate.KeyRequirement req) {
-        return switch (req.getType()) {
             case MMOITEMS   -> { var h = plugin.getHookManager().getMmoItemsHook();   yield h != null && h.removeKey(player, req.getKeyId(), req.getAmount()); }
             case ITEMSADDER -> { var h = plugin.getHookManager().getItemsAdderHook(); yield h != null && h.removeKey(player, req.getKeyId(), req.getAmount()); }
             case ORAXEN     -> { var h = plugin.getHookManager().getOraxenHook();     yield h != null && h.removeKey(player, req.getKeyId(), req.getAmount()); }
-            default         -> false;
         };
     }
 
@@ -169,7 +157,7 @@ public class KeyManager {
                     .removeVirtualKeys(player.getUniqueId(), keyId, amount)
                     .get(2, TimeUnit.SECONDS);
         } catch (Exception e) {
-            Logger.severe("Gagal remove virtual key: " + e.getMessage());
+            Logger.severe("Failed to remove virtual key: " + e.getMessage());
             return false;
         }
     }

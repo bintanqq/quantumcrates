@@ -10,34 +10,12 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * PhysicalKeyItem — factory + validator untuk physical crate key item.
- *
- * Key diidentifikasi via PersistentDataContainer tag "quantumcrates:qc_key_id".
- * Tidak bisa dipalsukan dengan rename biasa — harus dibuat via factory ini.
- *
- * Semua konfigurasi item (display name, lore, material, cmd) dibaca dari
- * config.yml section "keys.<keyId>" dan di-pass ke factory ini oleh KeyManager.
- */
 public final class PhysicalKeyItem {
 
     private static final String PDC_KEY = "qc_key_id";
 
     private PhysicalKeyItem() {}
 
-    /* ─────────────────────── Factory ─────────────────────── */
-
-    /**
-     * Buat physical key item berdasarkan definisi dari config.
-     *
-     * @param plugin          Plugin instance untuk NamespacedKey
-     * @param keyId           ID key (e.g. "vip_key")
-     * @param amount          Jumlah item
-     * @param displayName     Display name (& color codes)
-     * @param lore            Lore lines (& color codes)
-     * @param material        Material item
-     * @param customModelData -1 untuk tidak pakai
-     */
     public static ItemStack create(
             QuantumCrates plugin,
             String keyId,
@@ -55,14 +33,10 @@ public final class PhysicalKeyItem {
 
         List<String> coloredLore = new ArrayList<>();
         if (lore != null) lore.forEach(l -> coloredLore.add(colorize(l)));
-        // Footer untuk identifikasi cepat
-        coloredLore.add("");
-        coloredLore.add("§8ID: §7" + keyId);
         meta.setLore(coloredLore);
 
         if (customModelData > 0) meta.setCustomModelData(customModelData);
 
-        // Brand PDC tag — ini yang bikin key bisa diidentifikasi
         NamespacedKey nsKey = new NamespacedKey(plugin, PDC_KEY);
         meta.getPersistentDataContainer().set(nsKey, PersistentDataType.STRING, keyId);
 
@@ -70,25 +44,18 @@ public final class PhysicalKeyItem {
         return item;
     }
 
-    /**
-     * Overload default: display name dan lore minimal, material TRIPWIRE_HOOK.
-     * Digunakan saat key tidak ada di config (fallback).
-     */
     public static ItemStack create(QuantumCrates plugin, String keyId, int amount) {
-        return create(
-                plugin, keyId, amount,
-                "&bCrate Key &8[&7" + keyId + "&8]",
-                List.of("&7Gunakan untuk membuka crate."),
-                Material.TRIPWIRE_HOOK,
-                -1
-        );
+        String displayName = plugin.getConfig().getString(
+                        "keys.physical.display-name", "&bCrate Key &8[&7{key}&8]")
+                .replace("{key}", keyId);
+        List<String> lore = new ArrayList<>();
+        String idLine = plugin.getConfig().getString(
+                "keys.physical.id-lore", "&7Key ID: &e{key}").replace("{key}", keyId);
+        lore.add(idLine);
+        lore.addAll(plugin.getConfig().getStringList("keys.physical.extra-lore"));
+        return create(plugin, keyId, amount, displayName, lore, Material.TRIPWIRE_HOOK, -1);
     }
 
-    /* ─────────────────────── Identification ─────────────────────── */
-
-    /**
-     * Ambil key ID dari item. Return null jika bukan QC physical key.
-     */
     public static String getKeyId(QuantumCrates plugin, ItemStack item) {
         if (item == null || item.getType().isAir() || !item.hasItemMeta()) return null;
         var meta = item.getItemMeta();
@@ -97,9 +64,6 @@ public final class PhysicalKeyItem {
         return meta.getPersistentDataContainer().get(nsKey, PersistentDataType.STRING);
     }
 
-    /**
-     * Return true jika item adalah physical key dengan keyId yang cocok.
-     */
     public static boolean isKey(QuantumCrates plugin, ItemStack item, String keyId) {
         return keyId != null && keyId.equals(getKeyId(plugin, item));
     }

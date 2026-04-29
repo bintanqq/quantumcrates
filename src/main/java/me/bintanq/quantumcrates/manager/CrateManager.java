@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CrateManager {
 
@@ -137,38 +138,33 @@ public class CrateManager {
             return;
         }
 
-        final int totalOpens = actual;
-        final int[] remaining = {totalOpens};
-        final int[] successCount = {0};
+        AtomicInteger remaining = new AtomicInteger(actual);
+        AtomicInteger successCount = new AtomicInteger(0);
 
         new org.bukkit.scheduler.BukkitRunnable() {
             @Override
             public void run() {
-                if (remaining[0] <= 0 || !player.isOnline()) {
-                    if (successCount[0] > 0)
-                        MessageManager.send(player, "mass-open-success", "{count}", String.valueOf(successCount[0]));
+                if (remaining.get() <= 0 || !player.isOnline()) {
+                    if (successCount.get() > 0)
+                        MessageManager.send(player, "mass-open-success", "{count}", String.valueOf(successCount.get()));
                     cancel();
                     return;
                 }
 
-                int batch = Math.min(10, remaining[0]);
+                int batch = Math.min(10, remaining.get());
                 for (int i = 0; i < batch; i++) {
                     if (executeOpen(player, crateId, true)) {
-                        successCount[0]++;
+                        successCount.incrementAndGet();
                     } else {
-                        remaining[0] = 0;
+                        remaining.set(0);
                         break;
                     }
-                    remaining[0]--;
+                    remaining.decrementAndGet();
                 }
             }
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
-    /**
-     * Core open logic shared by single and mass open.
-     * @param skipCooldownCheck true during mass open sessions (cooldown checked once before loop)
-     */
     private boolean executeOpen(Player player, String crateId, boolean skipCooldownCheck) {
         Crate crate = crateRegistry.get(crateId);
         if (crate == null || !crate.isEnabled()) return false;
@@ -252,7 +248,6 @@ public class CrateManager {
         deliverReward(player, result);
     }
 
-
     private void sendOpenResultFeedback(Player player, OpenResult result, String crateId) {
         switch (result) {
             case NOT_FOUND   -> MessageManager.send(player, "crate-not-found", "{crate}", crateId);
@@ -269,7 +264,17 @@ public class CrateManager {
                         ? playerDataManager.getRemainingCooldown(player.getUniqueId(), crateId, crate.getCooldownMs()) : 0;
                 MessageManager.send(player, "cooldown-active", "{time}", TimeUtil.formatDuration(rem));
             }
-            case MISSING_KEY     -> MessageManager.send(player, "key-not-found", "{key}", crateId);
+            case MISSING_KEY -> {
+                Crate crate = crateRegistry.get(crateId);
+                String missingKeyId = (crate != null)
+                        ? crate.getRequiredKeys().stream()
+                        .filter(req -> keyManager.countPossibleOpens(player, crate) == 0)
+                        .map(Crate.KeyRequirement::getKeyId)
+                        .findFirst()
+                        .orElse(crateId)
+                        : crateId;
+                MessageManager.send(player, "key-not-found", "{key}", missingKeyId);
+            }
             case ALREADY_OPENING -> MessageManager.send(player, "already-opening");
             default              -> MessageManager.send(player, "crate-not-found", "{crate}", crateId);
         }

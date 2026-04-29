@@ -18,14 +18,6 @@ import org.bukkit.Bukkit;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * WebServer — serves dashboard + REST API + WebSocket.
- *
- * New endpoints added for rarity management:
- *   GET  /api/rarities        → list all rarity definitions
- *   POST /api/rarities        → save updated rarity list (triggers reload)
- *   POST /api/rarities/reload → reload rarities.yml from disk
- */
 public class WebServer {
 
     private final QuantumCrates    plugin;
@@ -44,8 +36,6 @@ public class WebServer {
         this.plugin       = plugin;
         this.tokenManager = new WebTokenManager();
     }
-
-    /* ─────────────────────── Lifecycle ─────────────────────── */
 
     public void start() {
         String secret    = plugin.getConfig().getString("web.secret-token",
@@ -134,7 +124,7 @@ public class WebServer {
             try {
                 app.start(port);
                 Logger.info("&aWeb Dashboard running on port &e" + port);
-                Logger.info("&7Use &b/qc web &7in-game to get your access link.");
+                Logger.info("&7Use &a/qc web &7in-game to get your access link.");
             } catch (Exception e) {
                 Logger.severe("Web Server failed to start: " + e.getMessage());
             }
@@ -146,8 +136,6 @@ public class WebServer {
     public void stop() {
         if (app != null) { app.stop(); Logger.info("Web Server stopped."); }
     }
-
-    /* ─────────────────────── Magic Link ─────────────────────── */
 
     private void registerMagicLinkRoute() {
         app.get("/api/auth/magic", ctx -> {
@@ -173,8 +161,6 @@ public class WebServer {
             ctx.header("Location", "/");
         });
     }
-
-    /* ─────────────────────── Auth ─────────────────────── */
 
     private void registerAuthRoutes() {
         app.post("/api/auth/login", ctx -> {
@@ -204,8 +190,6 @@ public class WebServer {
             ctx.json(ok("Logged out"));
         });
     }
-
-    /* ─────────────────────── Crates ─────────────────────── */
 
     private void registerCrateRoutes() {
         app.get("/api/crates", ctx ->
@@ -255,17 +239,13 @@ public class WebServer {
         });
     }
 
-    /* ─────────────────────── Rarities (NEW) ─────────────────────── */
-
     private void registerRarityRoutes() {
-        // GET /api/rarities — returns all rarity definitions ordered by tier
         app.get("/api/rarities", ctx ->
                 ctx.result(GsonProvider.getGson().toJson(
                         Map.of("data", plugin.getRarityManager().getAll())
                 ))
         );
 
-        // POST /api/rarities — save a full updated list of rarities
         app.post("/api/rarities", ctx -> {
             try {
                 com.google.gson.JsonObject root = GsonProvider.getGson()
@@ -286,7 +266,6 @@ public class WebServer {
                     return;
                 }
 
-                // Validate: each rarity must have an id
                 for (RarityDefinition def : updated) {
                     if (def.getId() == null || def.getId().isBlank()) {
                         ctx.status(400).json(err("Each rarity must have an 'id' field."));
@@ -294,12 +273,9 @@ public class WebServer {
                     }
                 }
 
-                // Uppercase all IDs for consistency
                 updated.forEach(def -> def.setId(def.getId().toUpperCase()));
 
                 plugin.getRarityManager().saveRarities(updated);
-
-                // Broadcast to all WS clients so dashboard updates live
                 WebSocketBridge.getInstance().broadcastRaritiesUpdate(plugin.getRarityManager().getAll());
 
                 ctx.json(ok("Rarities saved. " + updated.size() + " tiers active."));
@@ -308,15 +284,12 @@ public class WebServer {
             }
         });
 
-        // POST /api/rarities/reload — reload from disk without changing content
         app.post("/api/rarities/reload", ctx -> {
             plugin.getRarityManager().reload();
             WebSocketBridge.getInstance().broadcastRaritiesUpdate(plugin.getRarityManager().getAll());
             ctx.json(ok("Rarities reloaded from rarities.yml."));
         });
     }
-
-    /* ─────────────────────── Keys ─────────────────────── */
 
     private void registerKeyRoutes() {
         app.get("/api/keys", ctx -> {
@@ -376,7 +349,7 @@ public class WebServer {
                         () -> plugin.getKeyManager().reload());
 
                 me.bintanq.quantumcrates.util.Logger.info(
-                        "[Web] Key mode changed to: &b" + mode.toUpperCase());
+                        "[Web] Key mode changed to: &a" + mode.toUpperCase());
 
                 ctx.json(ok("Key mode saved: " + mode.toUpperCase() +
                         ". Run /qc reload in-game if needed."));
@@ -393,7 +366,6 @@ public class WebServer {
                     "knownIds", plugin.getKeyManager().getKnownKeyIds()
             ));
         });
-
     }
 
     private void registerKeyConfigRoute() {
@@ -402,7 +374,6 @@ public class WebServer {
                 com.google.gson.JsonObject body = me.bintanq.quantumcrates.serializer.GsonProvider
                         .getGson().fromJson(ctx.body(), com.google.gson.JsonObject.class);
 
-                // Validate material
                 String material = body.has("material") ? body.get("material").getAsString().toUpperCase() : null;
                 if (material != null) {
                     org.bukkit.Material mat = org.bukkit.Material.matchMaterial(material);
@@ -427,7 +398,6 @@ public class WebServer {
 
                 plugin.saveConfig();
 
-                // Reload KeyManager on main thread so material reference updates safely
                 org.bukkit.Bukkit.getScheduler().runTask(plugin,
                         () -> plugin.getKeyManager().reload());
 
@@ -438,7 +408,6 @@ public class WebServer {
             }
         });
 
-        // GET /api/keys/config/physical — return current physical key settings
         app.get("/api/keys/config/physical", ctx -> {
             java.util.Map<String, Object> cfg = new java.util.LinkedHashMap<>();
             cfg.put("material",       plugin.getConfig().getString("keys.physical.material", "TRIPWIRE_HOOK"));
@@ -447,9 +416,6 @@ public class WebServer {
             ctx.result(me.bintanq.quantumcrates.serializer.GsonProvider.getGson().toJson(cfg));
         });
     }
-
-
-    /* ─────────────────────── Logs ─────────────────────── */
 
     private void registerLogRoutes() {
         app.get("/api/logs", ctx -> {
@@ -500,8 +466,6 @@ public class WebServer {
         });
     }
 
-    /* ─────────────────────── Players ─────────────────────── */
-
     private void registerPlayerRoutes() {
         app.get("/api/players/{uuid}/pity", ctx -> {
             try {
@@ -550,8 +514,6 @@ public class WebServer {
         });
     }
 
-    /* ─────────────────────── Server Status ─────────────────────── */
-
     private void registerServerRoutes() {
         app.get("/api/server/status", ctx ->
                 ctx.result(GsonProvider.getGson().toJson(Map.of(
@@ -566,8 +528,6 @@ public class WebServer {
                 )))
         );
     }
-
-    /* ─────────────────────── Messages Config ─────────────────────── */
 
     private void registerMessagesRoutes() {
         app.get("/api/config/messages", ctx -> {
@@ -619,7 +579,6 @@ public class WebServer {
             int saved = 0;
             List<String> log = new ArrayList<>();
 
-            // ── Crates ──────────────────────────────────────────────
             if (body.has("crates") && body.get("crates").isJsonObject()) {
                 com.google.gson.JsonObject cratesObj = body.getAsJsonObject("crates");
                 for (String crateId : cratesObj.keySet()) {
@@ -647,17 +606,18 @@ public class WebServer {
                 }
             }
 
-            // ── Rarities ─────────────────────────────────────────────
             if (body.has("rarities") && body.get("rarities").isJsonArray()) {
                 java.lang.reflect.Type listType =
                         new com.google.gson.reflect.TypeToken<List<me.bintanq.quantumcrates.model.RarityDefinition>>(){}.getType();
                 List<me.bintanq.quantumcrates.model.RarityDefinition> incoming =
                         GsonProvider.getGson().fromJson(body.get("rarities"), listType);
 
-                List<me.bintanq.quantumcrates.model.RarityDefinition> existing =
-                        plugin.getRarityManager().getAll();
-                Set<String> existingIds = existing.stream()
+                Set<String> existingIds = plugin.getRarityManager().getAll().stream()
                         .map(me.bintanq.quantumcrates.model.RarityDefinition::getId)
+                        .collect(java.util.stream.Collectors.toSet());
+
+                Set<String> incomingIds = incoming.stream()
+                        .map(d -> d.getId().toUpperCase())
                         .collect(java.util.stream.Collectors.toSet());
 
                 for (me.bintanq.quantumcrates.model.RarityDefinition def : incoming) {
@@ -666,11 +626,9 @@ public class WebServer {
                     Logger.info("[SaveAll] RARITY " + verb + ": " + def.getId());
                     log.add("RARITY " + verb + ": " + def.getId());
                 }
-                incoming.stream()
-                        .map(me.bintanq.quantumcrates.model.RarityDefinition::getId)
-                        .filter(id -> !incoming.stream()
-                                .map(me.bintanq.quantumcrates.model.RarityDefinition::getId)
-                                .collect(java.util.stream.Collectors.toSet()).contains(id))
+
+                existingIds.stream()
+                        .filter(id -> !incomingIds.contains(id))
                         .forEach(id -> {
                             Logger.info("[SaveAll] RARITY removed: " + id);
                             log.add("RARITY removed: " + id);
@@ -682,7 +640,6 @@ public class WebServer {
                 saved++;
             }
 
-            // ── Messages ─────────────────────────────────────────────
             if (body.has("messages") && body.get("messages").isJsonObject()) {
                 com.google.gson.JsonObject msgs = body.getAsJsonObject("messages");
                 if (msgs.has("chat") && msgs.get("chat").isJsonObject())
@@ -702,7 +659,6 @@ public class WebServer {
                 saved++;
             }
 
-            // ── Key Config ───────────────────────────────────────────
             if (body.has("keyConfig") && body.get("keyConfig").isJsonObject()) {
                 com.google.gson.JsonObject kc = body.getAsJsonObject("keyConfig");
                 if (kc.has("mode")) {
@@ -734,13 +690,10 @@ public class WebServer {
                 saved++;
             }
 
-            Logger.info("[SaveAll] ─── Complete: " + saved + " section(s), "
-                    + log.size() + " change(s) ───");
+            Logger.info("[SaveAll] Complete: " + saved + " section(s), " + log.size() + " change(s)");
             ctx.json(Map.of("status", "ok", "saved", saved, "log", log));
         });
     }
-
-    /* ─────────────────────── WebSocket ─────────────────────── */
 
     private void registerWebSocket() {
         app.ws("/ws", ws -> {
@@ -788,8 +741,6 @@ public class WebServer {
         });
     }
 
-    /* ─────────────────────── Broadcast API ─────────────────────── */
-
     public void broadcast(WebSocketBridge.EventType type, Map<String, Object> payload) {
         if (wsSessions.isEmpty()) return;
         Map<String, Object> event = new LinkedHashMap<>();
@@ -810,8 +761,6 @@ public class WebServer {
     public int getConnectedClients() { return wsSessions.size(); }
     public WebTokenManager getTokenManager() { return tokenManager; }
 
-    /* ─────────────────────── Error Page ─────────────────────── */
-
     private String buildErrorPage(String title, String msg, String hint) {
         return """
             <!DOCTYPE html><html><head>
@@ -828,15 +777,13 @@ public class WebServer {
                     background:#0f1e2e;padding:10px 14px;border-radius:8px}
             </style></head><body>
             <div class="box">
-              <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+              <div style="font-size:48px;margin-bottom:16px">&#9888;&#65039;</div>
               <h2>%s</h2>
               <p>%s</p>
               <div class="hint">%s</div>
             </div></body></html>
             """.formatted(title, title, msg, hint);
     }
-
-    /* ─────────────────────── Helpers ─────────────────────── */
 
     private Map<String, Object> ok(String msg) {
         return Map.of("status", "ok", "message", msg);

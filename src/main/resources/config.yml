@@ -38,6 +38,8 @@ keys:
   physical:
     material: TRIPWIRE_HOOK
     custom-model-data: -1
+    display-name: "&bCrate Key &8[&7{key}&8]"
+    id-lore: "&7Key ID: &e{key}"
     extra-lore:
       - ""
       - "&8▸ &7Right-click a crate to use."
@@ -69,20 +71,6 @@ web:
 
 # ─────────────────────────────────────────────────────────────
 # CHAT MESSAGES
-# All plugin chat messages. Supports & color codes.
-# Editable here or via Web Dashboard (realtime, no restart).
-#
-# Available placeholders per message:
-#   {player}    → player name
-#   {crate}     → crate name/ID
-#   {reward}    → reward name
-#   {key}       → key name
-#   {amount}    → quantity
-#   {time}      → duration (cooldown)
-#   {current}   → current value (pity)
-#   {max}       → maximum value (pity threshold)
-#   {count}     → quantity (mass open)
-#   {schedule}  → next open time (scheduled crate)
 # ─────────────────────────────────────────────────────────────
 messages:
   prefix: "&8[&aQuantumCrates&8] &r"
@@ -163,6 +151,14 @@ messages:
   list-entry:      "  &8▸ &e{id} &7({name}&7) {status} &8| &7{rewards} rewards &8| &7{keys} key(s)"
   list-status-on:  "&aEnabled"
   list-status-off: "&cDisabled"
+
+  # ── Web Dashboard ──
+  web-disabled:      "&c[QC] Web server is not active. Check &eweb.enabled &cin config.yml."
+  web-header-bar:    "&8&l━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  web-header-title:  "&b&l  QuantumCrates Dashboard"
+  web-link-label:    "&7Link &f(valid &e5 minutes&f, single use):"
+  web-link-hint:     "&7Click the link above to open the dashboard."
+  web-click-button:  "[Open Dashboard]"
 
   # ── Help command ──
   help-header:           "&a&l━━━ QuantumCrates Help ━━━"

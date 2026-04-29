@@ -52,10 +52,10 @@ public final class QuantumCrates extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        Logger.info("&b=============================");
-        Logger.info("&b  QuantumCrates &fv" + getDescription().getVersion());
-        Logger.info("&b  By bintanq");
-        Logger.info("&b=============================");
+        Logger.info("&a=============================");
+        Logger.info("&a  QuantumCrates &fv" + getDescription().getVersion());
+        Logger.info("&a  By bintanq");
+        Logger.info("&a=============================");
 
         saveDefaultConfig();
         GsonProvider.init();
@@ -148,10 +148,10 @@ public final class QuantumCrates extends JavaPlugin {
         try {
             if ("mysql".equalsIgnoreCase(type)) {
                 databaseManager = new MySQLDatabase(this);
-                Logger.info("Using &bMySQL &fdatabase.");
+                Logger.info("Using &aMySQL &fdatabase.");
             } else {
                 databaseManager = new SQLiteDatabase(this);
-                Logger.info("Using &bSQLite &fdatabase.");
+                Logger.info("Using &aSQLite &fdatabase.");
             }
             databaseManager.init();
             return true;
@@ -162,7 +162,6 @@ public final class QuantumCrates extends JavaPlugin {
         }
     }
 
-    /** Null-safe action caller for shutdown sequence. */
     private static <T> void ifNotNull(T obj, java.util.function.Consumer<T> action) {
         if (obj != null) action.accept(obj);
     }
@@ -180,5 +179,5 @@ public final class QuantumCrates extends JavaPlugin {
     public ParticleManager getParticleManager()        { return particleManager; }
     public WebServer getWebServer()                    { return webServer; }
     public StatsScheduler getStatsScheduler()          { return statsScheduler; }
-    public AnimationManager getAnimationManager() { return animationManager; }
+    public AnimationManager getAnimationManager()      { return animationManager; }
 }
