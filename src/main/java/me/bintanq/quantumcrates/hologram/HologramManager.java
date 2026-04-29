@@ -30,7 +30,7 @@ public class HologramManager {
 
     public void spawnHologram(Crate crate) {
         if (crate.getLocation() == null) return;
-        Location loc = toLocation(crate.getLocation());
+        Location loc = toLocation(crate);
         if (loc == null) return;
         removeHologram(crate.getId());
         Object handle = provider.createHologram(crate.getId(), loc, crate.getHologramLines());
@@ -60,9 +60,18 @@ public class HologramManager {
         Logger.info("Spawned &e" + hologramHandles.size() + " &fholograms.");
     }
 
-    private Location toLocation(Crate.SerializableLocation sl) {
+    private Location toLocation(Crate crate) {
+        Crate.SerializableLocation sl = crate.getLocation();
         World world = plugin.getServer().getWorld(sl.world);
-        if (world == null) { Logger.warn("Hologram world not found: " + sl.world); return null; }
-        return new Location(world, sl.x + 0.5, sl.y + 2.5, sl.z + 0.5, sl.yaw, sl.pitch);
+        if (world == null) {
+            Logger.warn("Hologram world not found: " + sl.world);
+            return null;
+        }
+
+        double offset = crate.getHologramHeight();
+
+        if (offset == 0) offset = 1.2;
+
+        return new Location(world, sl.x + 0.5, sl.y + offset, sl.z + 0.5, sl.yaw, sl.pitch);
     }
 }

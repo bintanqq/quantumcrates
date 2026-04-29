@@ -77,12 +77,22 @@ public class CrateManager {
 
     public void saveCrate(Crate crate) {
         synchronized (saveLock) {
+            // Fix: Clean up old file if ID changed to prevent duplication/ghost files
+            Crate existing = crateRegistry.get(crate.getId());
+            if (existing != null && !existing.getId().equals(crate.getId())) {
+                File oldFile = new File(cratesDir, existing.getId() + ".json");
+                if (oldFile.exists()) oldFile.delete();
+            }
             File file = new File(cratesDir, crate.getId() + ".json");
             try (FileWriter writer = new FileWriter(file, StandardCharsets.UTF_8)) {
                 GsonProvider.getGson().toJson(crate, writer);
             } catch (IOException e) {
                 Logger.severe("Failed to save crate '" + crate.getId() + "': " + e.getMessage());
                 return;
+            }
+            // Fix: Remove old registry entry if ID changed to prevent double-save/duplication
+            if (existing != null && !existing.getId().equals(crate.getId())) {
+                crateRegistry.remove(existing.getId());
             }
             crateRegistry.put(crate.getId(), crate);
         }
@@ -204,7 +214,6 @@ public class CrateManager {
                 playerDataManager.setLastOpen(player.getUniqueId(), crateId);
 
             plugin.getAnimationManager().startAnimation(player, crate, result);
-            deliverReward(player, result);
 
             if (plugin.getParticleManager() != null)
                 plugin.getParticleManager().playOpenEffect(crate, player.getLocation());
@@ -236,7 +245,7 @@ public class CrateManager {
         }
     }
 
-    private void deliverReward(Player player, RewardResult result) {
+    public void deliverRewardPublic(Player player, RewardResult result) {
         if (result.hasItem()) {
             ItemStack item = result.getItemStack();
             if (player.getInventory().firstEmpty() == -1) {
@@ -248,10 +257,6 @@ public class CrateManager {
         }
         if (result.hasCommands()) rewardProcessor.executeCommands(player, result);
         MessageManager.send(player, "reward-received", "{reward}", result.getReward().getDisplayName());
-    }
-
-    public void deliverRewardPublic(Player player, RewardResult result) {
-        deliverReward(player, result);
     }
 
     private void sendOpenResultFeedback(Player player, OpenResult result, String crateId) {
@@ -297,75 +302,76 @@ public class CrateManager {
         String pityMinRarity = rarities.size() >= 5 ? rarities.get(rarities.size() - 2).getId() : highestRarity;
 
         String json = """
+        {
+          "id": "example_crate",
+          "displayName": "&b&lExample Crate",
+          "hologramLines": ["&b&lEXAMPLE CRATE", "&7Left-click to preview!", "&7Right-click to open!"],
+          "hologramHeight": 1.2,
+          "requiredKeys": [
+            { "keyId": "example_key", "amount": 1, "type": "VIRTUAL" }
+          ],
+          "rewards": [
             {
-              "id": "example_crate",
-              "displayName": "&b&lExample Crate",
-              "hologramLines": ["&b&lEXAMPLE CRATE", "&7Left-click to preview!", "&7Right-click to open!"],
-              "requiredKeys": [
-                { "keyId": "example_key", "amount": 1, "type": "VIRTUAL" },
-              ],
-              "rewards": [
-                {
-                  "id": "diamond",
-                  "displayName": "&bDiamond",
-                  "weight": 50.0,
-                  "rarity": "%s",
-                  "type": "VANILLA",
-                  "material": "DIAMOND",
-                  "amount": 1
-                },
-                {
-                  "id": "emerald",
-                  "displayName": "&aEmerald",
-                  "weight": 25.0,
-                  "rarity": "%s",
-                  "type": "VANILLA",
-                  "material": "EMERALD",
-                  "amount": 2
-                },
-                {
-                  "id": "netherite",
-                  "displayName": "&4&lNetherite Ingot",
-                  "weight": 5.0,
-                  "rarity": "%s",
-                  "type": "VANILLA",
-                  "material": "NETHERITE_INGOT",
-                  "amount": 1,
-                  "broadcast": true,
-                  "broadcastMessage": "&e{player} &7won &4Netherite&7 from Example Crate!"
-                },
-                {
-                  "id": "cmd_reward",
-                  "displayName": "&d&lMythic Command",
-                  "weight": 1.0,
-                  "rarity": "%s",
-                  "type": "COMMAND",
-                  "commands": ["console: give {player} minecraft:nether_star 5"],
-                  "broadcast": true,
-                  "broadcastMessage": "&d✦ {player} got a top-tier reward!"
-                }
-              ],
-              "preview": {
-                "sortOrder": "RARITY_DESC",
-                "showChance": true,
-                "showPity": true,
-                "showKeyBalance": true,
-                "showActualItem": true
-              },
-              "cooldownMs": 3600000,
-              "pity": {
-                "enabled": true,
-                "threshold": 50,
-                "rareRarityMinimum": "%s",
-                "bonusChancePerOpen": 2.0,
-                "softPityStart": 40
-              },
-              "massOpenEnabled": true,
-              "massOpenLimit": 64,
-              "enabled": true,
-              "guiAnimation": "ROULETTE"
+              "id": "diamond",
+              "displayName": "&bDiamond",
+              "weight": 50.0,
+              "rarity": "%s",
+              "type": "VANILLA",
+              "material": "DIAMOND",
+              "amount": 1
+            },
+            {
+              "id": "emerald",
+              "displayName": "&aEmerald",
+              "weight": 25.0,
+              "rarity": "%s",
+              "type": "VANILLA",
+              "material": "EMERALD",
+              "amount": 2
+            },
+            {
+              "id": "netherite",
+              "displayName": "&4&lNetherite Ingot",
+              "weight": 5.0,
+              "rarity": "%s",
+              "type": "VANILLA",
+              "material": "NETHERITE_INGOT",
+              "amount": 1,
+              "broadcast": true,
+              "broadcastMessage": "&e{player} &7won &4Netherite&7 from Example Crate!"
+            },
+            {
+              "id": "cmd_reward",
+              "displayName": "&d&lMythic Command",
+              "weight": 1.0,
+              "rarity": "%s",
+              "type": "COMMAND",
+              "commands": ["console: give {player} minecraft:nether_star 5"],
+              "broadcast": true,
+              "broadcastMessage": "&d✦ {player} got a top-tier reward!"
             }
-            """.formatted(lowestRarity, midRarity, pityMinRarity, highestRarity, pityMinRarity);
+          ],
+          "preview": {
+            "sortOrder": "RARITY_DESC",
+            "showChance": true,
+            "showPity": true,
+            "showKeyBalance": true,
+            "showActualItem": true
+          },
+          "cooldownMs": 3600000,
+          "pity": {
+            "enabled": true,
+            "threshold": 50,
+            "rareRarityMinimum": "%s",
+            "bonusChancePerOpen": 2.0,
+            "softPityStart": 40
+          },
+          "massOpenEnabled": true,
+          "massOpenLimit": 64,
+          "enabled": true,
+          "guiAnimation": "ROULETTE"
+        }
+        """.formatted(lowestRarity, midRarity, pityMinRarity, highestRarity, pityMinRarity);
 
         try (FileWriter w = new FileWriter(example, StandardCharsets.UTF_8)) {
             w.write(json);

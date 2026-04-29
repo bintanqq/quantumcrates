@@ -211,7 +211,9 @@ public class WebServer {
                 if (crate.getId() == null) crate.setId(ctx.pathParam("id"));
 
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    plugin.getCrateManager().registerCrate(crate);
+                    plugin.getCrateManager().saveCrate(crate);
+                    if (plugin.getHologramManager() != null) plugin.getHologramManager().spawnHologram(crate);
+                    if (plugin.getParticleManager() != null) plugin.getParticleManager().startIdleParticles(crate);
                     broadcast(WebSocketBridge.EventType.CRATE_UPDATE,
                             Map.of("crateId", crate.getId()));
                 });

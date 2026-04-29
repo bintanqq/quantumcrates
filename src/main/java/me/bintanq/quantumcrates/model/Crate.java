@@ -24,6 +24,9 @@ public class Crate {
     @SerializedName("hologramLines")
     private List<String> hologramLines = new ArrayList<>();
 
+    @SerializedName("hologramHeight")
+    private double hologramHeight = 1.2;
+
     /** Physical location of the crate block in the world. */
     @SerializedName("location")
     private SerializableLocation location;
@@ -76,20 +79,9 @@ public class Crate {
         @SerializedName("particle")
         private String particle = "HAPPY_VILLAGER";
 
-        @SerializedName("speed")
-        private double speed = 1.0;
-
-        @SerializedName("radius")
-        private double radius = 1.0;
-
-        @SerializedName("density")
-        private int density = 8;
-
         public String getType()     { return type; }
         public String getParticle() { return particle; }
-        public double getSpeed()    { return speed; }
-        public double getRadius()   { return radius; }
-        public int getDensity()     { return density; }
+
     }
 
     @SerializedName("guiAnimation")
@@ -255,6 +247,7 @@ public class Crate {
 
     public List<String> getHologramLines() { return hologramLines; }
     public SerializableLocation getLocation() { return location; }
+    public double getHologramHeight() { return hologramHeight; }
     public void setLocation(SerializableLocation location) { this.location = location; }
 
     public List<KeyRequirement> getRequiredKeys() { return requiredKeys; }

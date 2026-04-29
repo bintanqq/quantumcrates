@@ -341,16 +341,18 @@ const Architect = {
   _doDiscard() { Modal.close(); this.dirty = false; this.loadCrate(State.currentCrateId); toast('Changes discarded', 'info'); },
 
   newCrate() {
-    const id    = 'new_crate_' + Date.now();
-    const midId = State.rarities[Math.floor(State.rarities.length / 2)]?.id || 'RARE';
-    const crate = { id, displayName: '&fNew Crate', enabled: true, cooldownMs: 0, massOpenEnabled: true, massOpenLimit: 64, requiredKeys: [{ keyId: 'example_key', amount: 1, type: 'VIRTUAL' }], rewards: [], pity: { enabled: false, threshold: 100, softPityStart: 80, rareRarityMinimum: midId, bonusChancePerOpen: 2 }, preview: { sortOrder: 'RARITY_DESC', showChance: true, showPity: true, showKeyBalance: true, showActualItem: true } };
-    State.setCrate(crate);
-    State.currentCrateId = id;
-    this.dirty = true;
-    this.renderCrateTabs();
-    this.loadCrate(id);
-    toast('New crate created — configure and save!', 'info');
-  },
+      let seq = 1;
+      while (Object.keys(State.crates).includes('newcrate' + seq)) seq++;
+      const id    = 'newcrate' + seq;
+      const midId = State.rarities[Math.floor(State.rarities.length / 2)]?.id || 'RARE';
+      const crate = { id, displayName: '&fNew Crate', enabled: true, cooldownMs: 0, massOpenEnabled: true, massOpenLimit: 64, requiredKeys: [{ keyId: 'example_key', amount: 1, type: 'VIRTUAL' }], rewards: [], pity: { enabled: false, threshold: 100, softPityStart: 80, rareRarityMinimum: midId, bonusChancePerOpen: 2 }, preview: { sortOrder: 'RARITY_DESC', showChance: true, showPity: true, showKeyBalance: true, showActualItem: true } };
+      State.setCrate(crate);
+      State.currentCrateId = id;
+      this.dirty = true;
+      this.renderCrateTabs();
+      this.loadCrate(id);
+      toast('New crate created — configure and save!', 'info');
+   },
 
   _sortedRewards(rewards) {
     if (!rewards) return [];
@@ -410,11 +412,6 @@ const CrateSettingsModal = {
                 <select class="field-input" id="csIdleParticle">${['HAPPY_VILLAGER','FLAME','ENCHANT','END_ROD','WITCH','TOTEM_OF_UNDYING','DRAGON_BREATH','SOUL_FIRE_FLAME','CRIMSON_SPORE','GLOW','SNOWFLAKE'].map(p=>`<option value="${p}" ${(crate.idleAnimation?.particle||'HAPPY_VILLAGER')===p?'selected':''}>${p}</option>`).join('')}</select>
               </div>
             </div>
-            <div class="field-row-3">
-              <div class="field-group"><label class="field-label">Speed</label><input class="field-input" type="number" id="csIdleSpeed" value="${crate.idleAnimation?.speed??1.0}" min="0.1" max="10" step="0.1"/></div>
-              <div class="field-group"><label class="field-label">Radius</label><input class="field-input" type="number" id="csIdleRadius" value="${crate.idleAnimation?.radius??1.0}" min="0.1" max="5" step="0.1"/></div>
-              <div class="field-group"><label class="field-label">Density</label><input class="field-input" type="number" id="csIdleDensity" value="${crate.idleAnimation?.density??8}" min="1" max="32" step="1"/></div>
-            </div>
           </div>
 
           <div style="border-top:1px solid var(--border);padding-top:10px">
@@ -426,11 +423,6 @@ const CrateSettingsModal = {
               <div class="field-group"><label class="field-label">Particle</label>
                 <select class="field-input" id="csOpenParticle">${['HAPPY_VILLAGER','FLAME','ENCHANT','END_ROD','WITCH','TOTEM_OF_UNDYING','DRAGON_BREATH','SOUL_FIRE_FLAME','CRIMSON_SPORE','GLOW','SNOWFLAKE'].map(p=>`<option value="${p}" ${(crate.openAnimation?.particle||'HAPPY_VILLAGER')===p?'selected':''}>${p}</option>`).join('')}</select>
               </div>
-            </div>
-            <div class="field-row-3">
-              <div class="field-group"><label class="field-label">Speed</label><input class="field-input" type="number" id="csOpenSpeed" value="${crate.openAnimation?.speed??1.0}" min="0.1" max="10" step="0.1"/></div>
-              <div class="field-group"><label class="field-label">Radius</label><input class="field-input" type="number" id="csOpenRadius" value="${crate.openAnimation?.radius??1.0}" min="0.1" max="5" step="0.1"/></div>
-              <div class="field-group"><label class="field-label">Density</label><input class="field-input" type="number" id="csOpenDensity" value="${crate.openAnimation?.density??8}" min="1" max="32" step="1"/></div>
             </div>
           </div>
 
@@ -463,16 +455,10 @@ const CrateSettingsModal = {
     c.idleAnimation = {
       type:     Utils.qs('#csIdleType').value,
       particle: Utils.qs('#csIdleParticle').value,
-      speed:    parseFloat(Utils.qs('#csIdleSpeed').value)  || 1.0,
-      radius:   parseFloat(Utils.qs('#csIdleRadius').value) || 1.0,
-      density:  parseInt(Utils.qs('#csIdleDensity').value)  || 8,
     };
     c.openAnimation = {
       type:     Utils.qs('#csOpenType').value,
       particle: Utils.qs('#csOpenParticle').value,
-      speed:    parseFloat(Utils.qs('#csOpenSpeed').value)  || 1.0,
-      radius:   parseFloat(Utils.qs('#csOpenRadius').value) || 1.0,
-      density:  parseInt(Utils.qs('#csOpenDensity').value)  || 8,
     };
     c.guiAnimation = Utils.qs('#csGuiAnimation').value;
     this._onSave?.();

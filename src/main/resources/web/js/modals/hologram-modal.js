@@ -57,6 +57,22 @@ const HologramModal = {
               </span>`
             ).join('')}
           </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg3); padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:15px">
+            <div style="display:flex; flex-direction:column; gap:2px">
+              <span style="font-size:12px; font-weight:600; color:var(--text2)">Hologram Height Offset</span>
+              <span style="font-size:10px; color:var(--text3)">Default: 1.2</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px">
+              <input type="number"
+                class="field-input"
+                style="width:80px; text-align:center; font-family:monospace"
+                step="0.1"
+                value="${crate.hologramHeight || 1.2}"
+                oninput="HologramModal.updateHeight(this.value)"
+              />
+              <span style="font-size:11px; color:var(--cyan)">blocks</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -191,6 +207,15 @@ const HologramModal = {
     this.focusedIdx = newIdx;
     this.renderLines();
     this.updatePreview();
+  },
+
+  updateHeight(val) {
+      const crate = State.currentCrate;
+      crate.hologramHeight = val === "" ? 1.2 : parseFloat(val);
+
+      if (typeof Architect !== 'undefined') {
+          Architect.dirty = true;
+      }
   },
 
   save() {

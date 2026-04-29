@@ -38,12 +38,9 @@ public class ParticleManager {
 
         Particle particle = parseParticle(cfg.getParticle(), Particle.HAPPY_VILLAGER);
 
-        // Mirror ExcellentCrates: tickInterval and maxSteps per type
+        // DEAD KEYS REMOVED: speed, radius, density no longer used
         long   tickInterval = getTickInterval(type);
         int    maxSteps     = getMaxSteps(type);
-        double speed        = Math.max(0.05, cfg.getSpeed());
-        double radius       = Math.max(0.2,  cfg.getRadius());
-        int    density      = Math.max(1,    cfg.getDensity());
 
         tickCountMap.put(crate.getId(), 0L);
 
@@ -60,7 +57,7 @@ public class ParticleManager {
                 World w = base.getWorld();
                 if (w == null) { cancel(); return; }
 
-                playEffect(type, base, particle, (int) tick, speed, radius, density, w);
+                playEffect(type, base, particle, (int) tick, w);
 
                 long next = tick + 1;
                 if (next >= maxSteps) {
@@ -101,9 +98,6 @@ public class ParticleManager {
         Particle particle   = parseParticle(cfg.getParticle(), Particle.FIREWORK);
         int      maxSteps   = getMaxSteps(type);
         long     tickInter  = getTickInterval(type);
-        double   speed      = Math.max(0.1, cfg.getSpeed());
-        double   radius     = Math.max(0.3, cfg.getRadius());
-        int      density    = Math.max(4,   cfg.getDensity());
 
         // center on player location
         Location origin = playerLoc.clone().add(0.5, 0, 0.5);
@@ -115,7 +109,7 @@ public class ParticleManager {
                 World w = origin.getWorld();
                 if (w == null) { cancel(); return; }
                 if (tick % tickInter == 0) {
-                    playEffect(type, origin, particle, (int)(tick % maxSteps), speed, radius, density, w);
+                    playEffect(type, origin, particle, (int)(tick % maxSteps), w);
                 }
                 tick++;
             }
@@ -125,24 +119,22 @@ public class ParticleManager {
     /* ─── effect dispatcher ─────────────────────────── */
 
     private void playEffect(AnimationType type, Location origin, Particle particle,
-                            int step, double speed, double radius, int density, World w) {
+                            int step, World w) {
         switch (type) {
             case HELIX   -> playHelix  (origin, particle, step, w);
             case SPIRAL  -> playSpiral (origin, particle, step, w);
             case SPHERE  -> playSphere (origin, particle, step, w);
-            case PULSAR  -> playPulsar (origin, particle, step, w);
             case BEACON  -> playBeacon (origin, particle, step, w);
-            case TORNADO -> playTornado(origin, particle, step, radius, w);
+            case TORNADO -> playTornado(origin, particle, step, w);
             case VORTEX  -> playVortex (origin, particle, step, w);
             case SIMPLE  -> playSimple (origin, particle, w);
-            default      -> playSimple (origin, particle, w); // RING fallback
+            default      -> playSimple (origin, particle, w); // RING FALLBACK
         }
     }
 
-    /** HelixEffect: tickInterval=1, maxSteps=24 */
     private void playHelix(Location origin, Particle particle, int step, World w) {
         Location location = origin.clone().add(0, 0.05D * step, 0);
-        double x = Math.PI * step;                    // 0.3141592653589793 * step
+        double x = Math.PI * step;
         double z = step * 0.1 % 2.5;
         double y = 0.75;
         Location left  = getPointOnCircle(location, true, x,            y, z);
@@ -168,7 +160,6 @@ public class ParticleManager {
         w.spawnParticle(particle, loc, 5, 0, 0, 0, 0);
     }
 
-    /** SphereEffect: tickInterval=1, maxSteps=8 (NUM_CIRCLES) */
     private static final int SPHERE_CIRCLES = 8;
     private static final int SPHERE_POINTS  = 10;
     private static final double SPHERE_DELTA = Math.PI / 10.0;
@@ -187,19 +178,7 @@ public class ParticleManager {
         }
     }
 
-    /** PulsarEffect: tickInterval=2, maxSteps=38 */
-    private void playPulsar(Location origin, Particle particle, int step, World w) {
-        Location shifted = origin.clone().add(0, -0.8D, 0);
-        double y = (0.5 + step * 0.15) % 3.0;
-        int    pts = (int)(y * 10.0);
-        for (int point = 0; point < pts; point++) {
-            double x = 2 * Math.PI / (y * 10.0) * point;
-            Location loc = getPointOnCircle(shifted.clone(), false, x, y, 1.0);
-            w.spawnParticle(particle, loc, 2, 0.1f, 0, 0, 0);
-        }
-    }
-
-    /** BeaconEffect: tickInterval=3, maxSteps=40 */
+    /** BEACON REMOVED PULSAR REFERENCES */
     private void playBeacon(Location origin, Particle particle, int step, World w) {
         double x = 2 * Math.PI / 7D * step;
         for (int yStep = step; yStep > Math.max(0, step - 25); --yStep) {
@@ -214,7 +193,7 @@ public class ParticleManager {
     private static final float  TORNADO_MAX_RADIUS  = 2.25F;
     private static final double TORNADO_DISTANCE    = 0.375D;
 
-    private void playTornado(Location origin, Particle particle, int step, double radiusCfg, World w) {
+    private void playTornado(Location origin, Particle particle, int step, World w) {
         Location loc    = origin.clone().add(0, 0.5D, 0);
         double offset   = 0.25D * (TORNADO_MAX_RADIUS * (2.35D / TORNADO_HEIGHT));
         double vertical = TORNADO_HEIGHT - TORNADO_DISTANCE * step;
@@ -253,7 +232,6 @@ public class ParticleManager {
         }
     }
 
-    /** SimpleEffect: tickInterval=2, maxSteps=2 */
     private void playSimple(Location origin, Particle particle, World w) {
         Location loc = origin.clone().add(0, 0.5D, 0);
         w.spawnParticle(particle, loc, 30, 0.3f, 0.1f, 0.3f, 0);
@@ -268,7 +246,7 @@ public class ParticleManager {
     private long getTickInterval(AnimationType type) {
         return switch (type) {
             case HELIX, SPIRAL, SPHERE, VORTEX -> 1L;
-            case PULSAR, SIMPLE, TORNADO       -> 2L;
+            case SIMPLE, TORNADO               -> 2L;
             case BEACON                         -> 3L;
             default                             -> 2L;
         };
@@ -279,7 +257,6 @@ public class ParticleManager {
             case HELIX   -> 24;
             case SPIRAL  -> SPIRAL_POINTS; // 50
             case SPHERE  -> SPHERE_CIRCLES; // 8
-            case PULSAR  -> 38;
             case BEACON  -> 40;
             case TORNADO -> 8;
             case VORTEX  -> VORTEX_PARTICLES; // 34
@@ -291,7 +268,7 @@ public class ParticleManager {
     /* ─── helpers ─────────────────────────────────── */
 
     public enum AnimationType {
-        HELIX, SPIRAL, SPHERE, PULSAR, BEACON, TORNADO, VORTEX, SIMPLE, NONE
+        HELIX, SPIRAL, SPHERE, BEACON, TORNADO, VORTEX, SIMPLE, NONE
     }
 
     private AnimationType parseType(String name) {

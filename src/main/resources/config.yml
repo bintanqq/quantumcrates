@@ -155,7 +155,7 @@ messages:
   # ── Web Dashboard ──
   web-disabled:      "&c[QC] Web server is not active. Check &eweb.enabled &cin config.yml."
   web-header-bar:    "&8&l━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  web-header-title:  "&b&l  QuantumCrates Dashboard"
+  web-header-title:  "&a&l  QuantumCrates Dashboard"
   web-link-label:    "&7Link &f(valid &e5 minutes&f, single use):"
   web-link-hint:     "&7Click the link above to open the dashboard."
   web-click-button:  "[Open Dashboard]"

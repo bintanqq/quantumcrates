@@ -78,7 +78,8 @@ Each crate is stored as a `.json` file in `plugins/QuantumCrates/crates/`. You c
 - Idle and open particle animations
 - Hologram lines above the crate block
 - Schedule (time window, days of week, or event window)
-- Preview GUI customization
+- Open Gui Animation
+- Idle and Open Particle Animation
 
 ### Reward System
 

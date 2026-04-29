@@ -189,8 +189,15 @@ public class KeyManager {
 
     public Collection<String> getKnownKeyIds() {
         Set<String> ids = new LinkedHashSet<>();
-        plugin.getCrateManager().getAllCrates()
-                .forEach(c -> c.getRequiredKeys().forEach(r -> ids.add(r.getKeyId())));
+        plugin.getCrateManager().getAllCrates().forEach(c -> {
+            if (c.getRequiredKeys() != null) {
+                c.getRequiredKeys().forEach(r -> {
+                    if (r != null && r.getKeyId() != null) {
+                        ids.add(r.getKeyId());
+                    }
+                });
+            }
+        });
         return ids;
     }
 }
