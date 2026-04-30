@@ -1,3 +1,5 @@
+![QuantumCrates Header Banner](https://i.imgur.com/kfhA9ox.png)
+
 # QuantumCrates
 
 A Minecraft crate plugin for Paper 1.21 built around a **web-first management philosophy** — configure everything from a browser dashboard without touching a single config file or restarting the server.
