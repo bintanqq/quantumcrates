@@ -23,6 +23,7 @@ import me.bintanq.quantumcrates.util.Logger;
 import me.bintanq.quantumcrates.web.StatsScheduler;
 import me.bintanq.quantumcrates.web.WebServer;
 import me.bintanq.quantumcrates.web.WebSocketBridge;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.concurrent.ExecutorService;
@@ -51,6 +52,9 @@ public final class QuantumCrates extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+
+        int pluginId = 31014;
+        Metrics metrics = new Metrics(this, pluginId);
 
         Logger.info("&a=============================");
         Logger.info("&a  QuantumCrates &fv" + getDescription().getVersion());
