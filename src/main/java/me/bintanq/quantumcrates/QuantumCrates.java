@@ -23,6 +23,7 @@ import me.bintanq.quantumcrates.util.Logger;
 import me.bintanq.quantumcrates.web.StatsScheduler;
 import me.bintanq.quantumcrates.web.WebServer;
 import me.bintanq.quantumcrates.web.WebSocketBridge;
+import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -49,6 +50,7 @@ public final class QuantumCrates extends JavaPlugin {
     private WebServer webServer;
     private StatsScheduler statsScheduler;
     private AnimationManager animationManager;
+    private BukkitAudiences adventure;
 
     @Override
     public void onEnable() {
@@ -107,6 +109,8 @@ public final class QuantumCrates extends JavaPlugin {
         particleManager = new ParticleManager(this);
         particleManager.startAll();
 
+        this.adventure = BukkitAudiences.create(this);
+
         if (getConfig().getBoolean("web.enabled", true)) {
             webServer = new WebServer(this);
             webServer.start();
@@ -148,6 +152,10 @@ public final class QuantumCrates extends JavaPlugin {
             }
         }
         if (databaseManager != null) databaseManager.close();
+
+        if (this.adventure != null) {
+            this.adventure.close();
+        }
 
         Logger.info("&cQuantumCrates disabled.");
     }
@@ -201,4 +209,5 @@ public final class QuantumCrates extends JavaPlugin {
     public WebServer getWebServer()                    { return webServer; }
     public StatsScheduler getStatsScheduler()          { return statsScheduler; }
     public AnimationManager getAnimationManager()      { return animationManager; }
+    public BukkitAudiences adventure() { return adventure; }
 }
