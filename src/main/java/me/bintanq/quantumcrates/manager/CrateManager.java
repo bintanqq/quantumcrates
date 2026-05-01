@@ -4,6 +4,7 @@ import me.bintanq.quantumcrates.QuantumCrates;
 import me.bintanq.quantumcrates.log.LogManager;
 import me.bintanq.quantumcrates.model.Crate;
 import me.bintanq.quantumcrates.model.PlayerData;
+import me.bintanq.quantumcrates.model.SaveReport;
 import me.bintanq.quantumcrates.model.reward.RewardResult;
 import me.bintanq.quantumcrates.serializer.GsonProvider;
 import me.bintanq.quantumcrates.util.Logger;
@@ -63,6 +64,7 @@ public class CrateManager {
         for (File file : files) {
             try (FileReader reader = new FileReader(file, StandardCharsets.UTF_8)) {
                 Crate crate = GsonProvider.getGson().fromJson(reader, Crate.class);
+                crate.migrateLegacyLocation();
                 if (crate.getId() == null || crate.getId().isEmpty())
                     crate.setId(file.getName().replace(".json", ""));
                 crateRegistry.put(crate.getId(), crate);
@@ -86,6 +88,68 @@ public class CrateManager {
             }
             crateRegistry.put(crate.getId(), crate);
         }
+    }
+
+    public SaveReport.Entry diffCrate(Crate before, Crate after) {
+        if (before == null)
+            return new SaveReport.Entry("CRATE", SaveReport.ChangeType.ADDED,
+                    "Created crate '" + after.getId() + "'" +
+                            " displayName='" + after.getDisplayName() + "'");
+
+        List<String> changes = new ArrayList<>();
+
+        if (!java.util.Objects.equals(before.getDisplayName(), after.getDisplayName()))
+            changes.add("displayName '" + before.getDisplayName() + "' → '" + after.getDisplayName() + "'");
+
+        if (before.isEnabled() != after.isEnabled())
+            changes.add("enabled " + before.isEnabled() + " → " + after.isEnabled());
+
+        if (before.getCooldownMs() != after.getCooldownMs())
+            changes.add("cooldown " + before.getCooldownMs() + "ms → " + after.getCooldownMs() + "ms");
+
+        // GUI animation
+        if (before.getGuiAnimation() != after.getGuiAnimation())
+            changes.add("guiAnimation " + before.getGuiAnimation() + " → " + after.getGuiAnimation());
+
+        // Idle animation
+        if (!before.getIdleAnimation().getType().equals(after.getIdleAnimation().getType()))
+            changes.add("idleAnimation " + before.getIdleAnimation().getType()
+                    + " → " + after.getIdleAnimation().getType());
+
+        // Rewards — detect added/removed by id
+        Set<String> beforeIds = before.getRewards().stream()
+                .map(me.bintanq.quantumcrates.model.reward.Reward::getId)
+                .collect(java.util.stream.Collectors.toSet());
+        Set<String> afterIds = after.getRewards().stream()
+                .map(me.bintanq.quantumcrates.model.reward.Reward::getId)
+                .collect(java.util.stream.Collectors.toSet());
+
+        afterIds.stream().filter(id -> !beforeIds.contains(id))
+                .forEach(id -> changes.add("added reward '" + id + "'"));
+        beforeIds.stream().filter(id -> !afterIds.contains(id))
+                .forEach(id -> changes.add("removed reward '" + id + "'"));
+
+        // Reward weight changes
+        after.getRewards().forEach(ar -> {
+            before.getRewards().stream()
+                    .filter(br -> br.getId().equals(ar.getId()))
+                    .findFirst().ifPresent(br -> {
+                        if (br.getWeight() != ar.getWeight())
+                            changes.add("reward '" + ar.getId() + "' weight "
+                                    + br.getWeight() + " → " + ar.getWeight());
+                    });
+        });
+
+        // Locations
+        int beforeLocs = before.getLocations().size();
+        int afterLocs  = after.getLocations().size();
+        if (beforeLocs != afterLocs)
+            changes.add("locations count " + beforeLocs + " → " + afterLocs);
+
+        String detail = changes.isEmpty() ? "metadata only"
+                : String.join("; ", changes);
+        return new SaveReport.Entry("CRATE", SaveReport.ChangeType.MODIFIED,
+                "Modified crate '" + after.getId() + "': " + detail);
     }
 
     public enum OpenResult {
@@ -293,6 +357,10 @@ public class CrateManager {
             case ALREADY_OPENING -> MessageManager.send(player, "already-opening");
             default              -> MessageManager.send(player, "crate-not-found", "{crate}", crateId);
         }
+    }
+
+    public void sendOpenResultFeedbackPublic(Player player, OpenResult result, String crateId) {
+        sendOpenResultFeedback(player, result, crateId);
     }
 
     private void createExampleCrate() {

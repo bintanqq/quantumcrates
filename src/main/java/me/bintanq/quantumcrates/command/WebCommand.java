@@ -59,6 +59,9 @@ public class WebCommand implements CommandExecutor, TabCompleter {
     private String resolveHost(String[] args) {
         if (args.length >= 1) return args[0];
         String configHost = plugin.getConfig().getString("web.hostname", "");
+        if (configHost.equalsIgnoreCase("auto")) {
+            return plugin.getWebServer().resolveAutoHostname();
+        }
         if (!configHost.isEmpty()) return configHost;
         return "localhost";
     }

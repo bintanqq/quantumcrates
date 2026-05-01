@@ -5,11 +5,14 @@ import me.bintanq.quantumcrates.model.Crate;
 import me.bintanq.quantumcrates.util.Logger;
 import me.bintanq.quantumcrates.util.MessageManager;
 import me.bintanq.quantumcrates.util.PhysicalKeyItem;
+import me.bintanq.quantumcrates.util.UUIDResolver;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -84,6 +87,26 @@ public class KeyManager {
                     "{amount}", String.valueOf(amount), "{key}", keyId);
         }
         return true;
+    }
+
+    public CompletableFuture<Boolean> giveKeyOffline(String nameOrUuid,
+                                                     String keyId, int amount) {
+        return UUIDResolver.resolve(nameOrUuid, plugin.getAsyncExecutor())
+                .thenComposeAsync(uuid -> {
+                    if (uuid == null) return CompletableFuture.completedFuture(false);
+
+                    return plugin.getPlayerDataManager().loadPlayer(uuid)
+                            .thenComposeAsync(ignored ->
+                                            plugin.getDatabaseManager().addVirtualKeys(uuid, keyId, amount)
+                                                    .thenApplyAsync(v -> {
+                                                        Player online = Bukkit.getPlayer(uuid);
+                                                        if (online != null)
+                                                            MessageManager.send(online, "key-given-receiver",
+                                                                    "{amount}", String.valueOf(amount), "{key}", keyId);
+                                                        return true;
+                                                    }, plugin.getAsyncExecutor()),
+                                    plugin.getAsyncExecutor());
+                }, plugin.getAsyncExecutor());
     }
 
     private List<String> buildPhysicalLore(String keyId) {

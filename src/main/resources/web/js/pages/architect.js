@@ -453,6 +453,15 @@ const CrateSettingsModal = {
               <select class="field-input" id="csGuiAnimation">${['ROULETTE','SHUFFLER','BOUNDARY','SINGLE_SPIN','FLICKER'].map(t=>`<option value="${t}" ${(crate.guiAnimation||'ROULETTE')===t?'selected':''}>${t.replace(/_/g,' ')}</option>`).join('')}</select>
             </div>
           </div>
+          <div style="border-top:1px solid var(--border);padding-top:10px">
+            <div class="section-label" style="margin-bottom:7px">ACCESS DENIED KNOCKBACK</div>
+            <div id="csKnockbackToggle" style="margin-bottom:8px"></div>
+            <div class="field-group" id="csKnockbackStrengthGroup" style="${crate.accessDeniedKnockback ? '' : 'display:none'}">
+              <label class="field-label">Knockback Strength <span style="color:var(--text3)">(0.1 – 3.0)</span></label>
+              <input class="field-input" type="number" id="csKnockbackStrength"
+                value="${crate.knockbackStrength ?? 0.6}" min="0.1" max="3.0" step="0.1"/>
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-foot">
@@ -463,6 +472,14 @@ const CrateSettingsModal = {
 
     const enabledToggleEl = Utils.qs('#csEnabledToggle');
     const massToggleEl    = Utils.qs('#csMassToggle');
+    const knockbackToggleEl = Utils.qs('#csKnockbackToggle');
+    if (knockbackToggleEl) knockbackToggleEl.appendChild(
+        ToggleSwitch('Enable Knockback on Denied', !!crate.accessDeniedKnockback, v => {
+            this._crate.accessDeniedKnockback = v;
+            const sg = Utils.qs('#csKnockbackStrengthGroup');
+            if (sg) sg.style.display = v ? '' : 'none';
+        })
+    );
     if (enabledToggleEl) enabledToggleEl.appendChild(
       ToggleSwitch('Crate Enabled', crate.enabled !== false, v => { this._crate.enabled = v; })
     );
@@ -504,6 +521,8 @@ const CrateSettingsModal = {
       c.idleAnimation = { type: idleTypeEl?.value || 'HELIX', particle: idleParticleEl?.value || 'HAPPY_VILLAGER' };
       c.openAnimation = { type: openTypeEl?.value || 'SIMPLE',  particle: openParticleEl?.value || 'HAPPY_VILLAGER' };
       c.guiAnimation  = guiAnimEl?.value || 'ROULETTE';
+      c.accessDeniedKnockback = !!this._crate.accessDeniedKnockback;
+      c.knockbackStrength = parseFloat(Utils.qs('#csKnockbackStrength')?.value) || 0.6;
 
       State.setCrate(c);
       State.markDirty('crate', { id: c.id });

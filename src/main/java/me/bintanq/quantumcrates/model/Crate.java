@@ -27,9 +27,8 @@ public class Crate {
     @SerializedName("hologramHeight")
     private double hologramHeight = 1.2;
 
-    /** Physical location of the crate block in the world. */
-    @SerializedName("location")
-    private SerializableLocation location;
+    @SerializedName("locations")
+    private List<SerializableLocation> locations = new ArrayList<>();
 
     /** Required keys to open this crate. Supports multi-key combos. */
     @SerializedName("requiredKeys")
@@ -62,6 +61,13 @@ public class Crate {
     /** Max openings per mass-open call. -1 = unlimited. */
     @SerializedName("massOpenLimit")
     private int massOpenLimit = -1;
+
+    @SerializedName("accessDeniedKnockback")
+    private boolean accessDeniedKnockback = false;
+
+    @SerializedName("knockbackStrength")
+    private double knockbackStrength = 0.6;
+
 
     // NOTE: idleParticle and openParticle (legacy string fields) removed.
     // Particle type and effect are now fully defined inside idleAnimation and openAnimation.
@@ -225,6 +231,17 @@ public class Crate {
         }
     }
 
+    @SerializedName("location")
+    @com.google.gson.annotations.Expose(serialize = false, deserialize = true)
+    private SerializableLocation _legacyLocation = null;
+
+    public void migrateLegacyLocation() {
+        if (_legacyLocation != null) {
+            addLocation(_legacyLocation);
+            _legacyLocation = null;
+        }
+    }
+
     /* ─────────────────────── Computed Helpers ─────────────────────── */
 
     public double getTotalWeight() {
@@ -234,6 +251,28 @@ public class Crate {
     public boolean isCurrentlyOpenable() {
         if (schedule == null) return true;
         return schedule.isCurrentlyActive();
+    }
+
+    public boolean hasLocationAt(String world, int bx, int by, int bz) {
+        return getLocations().stream().anyMatch(loc ->
+                loc != null
+                        && loc.world != null
+                        && loc.world.equals(world)
+                        && (int) loc.x == bx
+                        && (int) loc.y == by
+                        && (int) loc.z == bz);
+    }
+
+    public boolean addLocation(SerializableLocation loc) {
+        if (hasLocationAt(loc.world, (int) loc.x, (int) loc.y, (int) loc.z)) return false;
+        getLocations().add(loc);
+        return true;
+    }
+
+    public boolean removeLocation(int index) {
+        if (index < 0 || index >= getLocations().size()) return false;
+        getLocations().remove(index);
+        return true;
     }
 
     /* ─────────────────────── Getters / Setters ─────────────────────── */
@@ -246,9 +285,20 @@ public class Crate {
     public void setDisplayName(String displayName) { this.displayName = displayName; }
 
     public List<String> getHologramLines() { return hologramLines; }
-    public SerializableLocation getLocation() { return location; }
+    public List<SerializableLocation> getLocations() {
+        if (locations == null) locations = new ArrayList<>();
+        return locations;
+    }
     public double getHologramHeight() { return hologramHeight; }
-    public void setLocation(SerializableLocation location) { this.location = location; }
+    public void setLocations(List<SerializableLocation> locations) {
+        this.locations = locations;
+    }
+
+
+    public boolean isAccessDeniedKnockback() { return accessDeniedKnockback; }
+    public void setAccessDeniedKnockback(boolean v) { this.accessDeniedKnockback = v; }
+    public double getKnockbackStrength() { return Math.max(0, Math.min(knockbackStrength, 3.0)); }
+    public void setKnockbackStrength(double v) { this.knockbackStrength = v; }
 
     public List<KeyRequirement> getRequiredKeys() { return requiredKeys; }
     public List<Reward> getRewards() { return rewards; }

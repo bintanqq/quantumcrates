@@ -33,54 +33,58 @@ public class ParticleManager {
 
     public void startIdleParticles(Crate crate) {
         stopIdleParticles(crate.getId());
-        if (crate.getLocation() == null) return;
+        if (crate.getLocations().isEmpty()) return;
 
-        Location base = toLocation(crate.getLocation());
-        if (base == null) return;
+        // Start one task per location
+        for (int i = 0; i < crate.getLocations().size(); i++) {
+            Crate.SerializableLocation sl = crate.getLocations().get(i);
+            Location base = toLocation(sl);
+            if (base == null) continue;
 
-        Crate.AnimationConfig cfg  = crate.getIdleAnimation();
-        AnimationType         type = parseType(cfg.getType());
-        if (type == AnimationType.NONE) return;
+            String key = crate.getId() + "_" + i;
+            Crate.AnimationConfig cfg   = crate.getIdleAnimation();
+            AnimationType         type  = parseType(cfg.getType());
+            if (type == AnimationType.NONE) continue;
 
-        Particle particle    = parseParticle(cfg.getParticle(), FALLBACK_IDLE);
-        long     tickInterval = getTickInterval(type);
-        int      maxSteps    = getMaxSteps(type);
+            Particle particle    = parseParticle(cfg.getParticle(), FALLBACK_IDLE);
+            long     tickInterval = getTickInterval(type);
+            int      maxSteps    = getMaxSteps(type);
 
-        tickCountMap.put(crate.getId(), 0L);
+            tickCountMap.put(key, 0L);
 
-        BukkitTask task = new BukkitRunnable() {
-            @Override
-            public void run() {
-                long tick = tickCountMap.getOrDefault(crate.getId(), 0L);
-
-                if (tick < 0 || tick % tickInterval != 0) {
-                    tickCountMap.put(crate.getId(), tick + 1);
-                    return;
+            BukkitTask task = new BukkitRunnable() {
+                @Override public void run() {
+                    long tick = tickCountMap.getOrDefault(key, 0L);
+                    if (tick < 0 || tick % tickInterval != 0) {
+                        tickCountMap.put(key, tick + 1); return;
+                    }
+                    World w = base.getWorld();
+                    if (w == null) { cancel(); return; }
+                    playEffect(type, base, particle, (int) tick, w);
+                    long next = tick + 1;
+                    if (next >= maxSteps) next = -10L;
+                    tickCountMap.put(key, next);
                 }
+            }.runTaskTimer(plugin, 0L, 1L);
 
-                World w = base.getWorld();
-                if (w == null) { cancel(); return; }
-
-                playEffect(type, base, particle, (int) tick, w);
-
-                long next = tick + 1;
-                if (next >= maxSteps) next = -10L;
-                tickCountMap.put(crate.getId(), next);
-            }
-        }.runTaskTimer(plugin, 0L, 1L);
-
-        idleTasks.put(crate.getId(), task);
+            idleTasks.put(key, task);
+        }
     }
 
     public void stopIdleParticles(String crateId) {
-        BukkitTask t = idleTasks.remove(crateId);
-        if (t != null) t.cancel();
-        tickCountMap.remove(crateId);
+        idleTasks.entrySet().removeIf(entry -> {
+            if (entry.getKey().startsWith(crateId + "_") || entry.getKey().equals(crateId)) {
+                entry.getValue().cancel();
+                tickCountMap.remove(entry.getKey());
+                return true;
+            }
+            return false;
+        });
     }
 
     public void startAll() {
         plugin.getCrateManager().getAllCrates().forEach(c -> {
-            if (c.getLocation() != null && c.isEnabled()) startIdleParticles(c);
+            if (c.getLocations() != null && c.isEnabled()) startIdleParticles(c);
         });
     }
 

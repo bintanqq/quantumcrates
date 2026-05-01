@@ -56,12 +56,12 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
     }
 
     private void cmdGive(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("quantumcrates.key.give")) { MessageManager.sendNoPermission(sender); return; }
+        if (!sender.hasPermission("quantumcrates.key.give")) {
+            MessageManager.sendNoPermission(sender); return;
+        }
         if (args.length < 4) { MessageManager.send(sender, "usage-give"); return; }
 
-        Player target = Bukkit.getPlayer(args[1]);
-        if (target == null) { MessageManager.sendPlayerNotFound(sender, args[1]); return; }
-
+        String targetInput = args[1];
         String keyId;
         int amount;
         try {
@@ -69,13 +69,27 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
             amount = Integer.parseInt(args[3]);
             if (amount <= 0) throw new NumberFormatException();
         } catch (NumberFormatException e) {
-            MessageManager.sendInvalidNumber(sender);
+            MessageManager.sendInvalidNumber(sender); return;
+        }
+
+        Player online = Bukkit.getPlayer(targetInput);
+        if (online != null) {
+            plugin.getKeyManager().giveKey(online, keyId, amount);
+            MessageManager.send(sender, "key-given-sender",
+                    "{amount}", String.valueOf(amount), "{key}", keyId, "{player}", online.getName());
             return;
         }
 
-        plugin.getKeyManager().giveKey(target, keyId, amount);
-        MessageManager.send(sender, "key-given-sender",
-                "{amount}", String.valueOf(amount), "{key}", keyId, "{player}", target.getName());
+        MessageManager.send(sender, "key-give-resolving", "{player}", targetInput);
+        plugin.getKeyManager().giveKeyOffline(targetInput, keyId, amount)
+                .thenAcceptAsync(success -> {
+                    if (success) {
+                        MessageManager.send(sender, "key-given-sender",
+                                "{amount}", String.valueOf(amount), "{key}", keyId, "{player}", targetInput);
+                    } else {
+                        MessageManager.sendPlayerNotFound(sender, targetInput);
+                    }
+                }, runnable -> Bukkit.getScheduler().runTask(plugin, runnable));
     }
 
     private void cmdOpen(CommandSender sender, String[] args) {
@@ -113,11 +127,15 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
                 "{schedule}", crate.getSchedule() != null ? crate.getSchedule().getNextOpenDescription() : MessageManager.getRaw("schedule-always"));
         MessageManager.send(sender, crate.isCurrentlyOpenable() ? "info-openable" : "info-not-openable");
 
-        if (crate.getLocation() != null) {
-            var l = crate.getLocation();
-            MessageManager.send(sender, "info-location",
-                    "{world}", l.world, "{x}", String.valueOf((int) l.x),
-                    "{y}", String.valueOf((int) l.y), "{z}", String.valueOf((int) l.z));
+        if (!crate.getLocations().isEmpty()) {
+            MessageManager.send(sender, "info-location-count",
+                    "{count}", String.valueOf(crate.getLocations().size()));
+            crate.getLocations().forEach(l ->
+                    MessageManager.send(sender, "info-location",
+                            "{world}", l.world,
+                            "{x}", String.valueOf((int) l.x),
+                            "{y}", String.valueOf((int) l.y),
+                            "{z}", String.valueOf((int) l.z)));
         } else {
             MessageManager.send(sender, "info-no-location", "{crate}", crate.getId());
         }
@@ -154,21 +172,26 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
         if (targeted == null) { MessageManager.send(sender, "setloc-no-target"); return; }
 
         var loc = targeted.getLocation();
+
+        // Check no other crate already owns this block
         for (Crate other : crateManager().getAllCrates()) {
             if (other.getId().equals(crate.getId())) continue;
-            Crate.SerializableLocation otherLoc = other.getLocation();
-            if (otherLoc != null
-                    && otherLoc.world.equals(loc.getWorld().getName())
-                    && (int) otherLoc.x == loc.getBlockX()
-                    && (int) otherLoc.y == loc.getBlockY()
-                    && (int) otherLoc.z == loc.getBlockZ()) {
-                MessageManager.send(sender, "setloc-already-taken",
-                        "{crate}", other.getId());
+            if (other.hasLocationAt(loc.getWorld().getName(),
+                    loc.getBlockX(), loc.getBlockY(), loc.getBlockZ())) {
+                MessageManager.send(sender, "setloc-already-taken", "{crate}", other.getId());
                 return;
             }
         }
-        crate.setLocation(new Crate.SerializableLocation(
-                loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
+
+        Crate.SerializableLocation newLoc = new Crate.SerializableLocation(
+                loc.getWorld().getName(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+
+        boolean added = crate.addLocation(newLoc);
+        if (!added) {
+            // Already exists — inform the admin
+            sender.sendMessage(MessageManager.color("&eThis block is already a location for &6" + crate.getId() + "&e."));
+            return;
+        }
         crateManager().saveCrate(crate);
 
         if (plugin.getHologramManager() != null) plugin.getHologramManager().spawnHologram(crate);
@@ -189,16 +212,35 @@ public class QuantumCratesCommand implements CommandExecutor, TabCompleter {
 
         Crate crate = crateManager().getCrate(args[1]);
         if (crate == null) { MessageManager.sendCrateNotFound(sender, args[1]); return; }
-        if (crate.getLocation() == null) {
-            MessageManager.send(sender, "delloc-no-location", "{crate}", crate.getId());
-            return;
+        if (crate.getLocations().isEmpty()) {
+            MessageManager.send(sender, "delloc-no-location", "{crate}", crate.getId()); return;
         }
 
-        crate.setLocation(null);
+        if (args.length >= 3) {
+            // Remove by index
+            int idx;
+            try { idx = Integer.parseInt(args[2]); }
+            catch (NumberFormatException e) {
+                MessageManager.send(sender, "delloc-index-invalid"); return;
+            }
+            if (!crate.removeLocation(idx)) {
+                MessageManager.send(sender, "delloc-index-invalid"); return;
+            }
+        } else {
+            // Remove all locations
+            crate.setLocations(new java.util.ArrayList<>());
+        }
+
         crateManager().saveCrate(crate);
 
         if (plugin.getHologramManager() != null) plugin.getHologramManager().removeHologram(crate.getId());
         if (plugin.getParticleManager()  != null) plugin.getParticleManager().stopIdleParticles(crate.getId());
+
+        // Re-spawn remaining holograms/particles
+        if (!crate.getLocations().isEmpty()) {
+            if (plugin.getHologramManager() != null) plugin.getHologramManager().spawnHologram(crate);
+            if (plugin.getParticleManager()  != null) plugin.getParticleManager().startIdleParticles(crate);
+        }
 
         MessageManager.send(sender, "delloc-success", "{crate}", crate.getId());
     }
